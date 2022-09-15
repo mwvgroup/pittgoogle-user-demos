@@ -49,7 +49,7 @@ model_file_name = "vanilla_S_0_CLF_2_R_none_photometry_DF_1.0_N_global_lstm_32x2
 model_path = Path(__file__).resolve().parent / f"{model_dir_name}/{model_file_name}"
 
 
-def run_snn(msg: dict, context) -> None:
+def run(msg: dict, context) -> None:
     """Classify alert with SuperNNova; publish and store results.
 
     For args descriptions, see:
@@ -102,6 +102,9 @@ def run_snn(msg: dict, context) -> None:
         if len(errors) > 0:
             logger.log_text(f"BigQuery insert error: {errors}", severity="DEBUG")
 
+    # create the message for elasticc and publish the stream
+    avro = _create_elasticc_msg(alert_dict, attrs)
+    gcp_utils.publish_pubsub(ps_topic, avro, attrs=attrs)
 
 def _classify_with_snn(alert_dict: dict) -> dict:
     """Classify the alert using SuperNNova."""
@@ -160,36 +163,6 @@ def _format_for_snn(alert_dict: dict) -> pd.DataFrame:
     return snn_df
 
 
-def run_pub(msg: dict, context) -> None:
-    """Publish Pitt-Google's classifications.
-
-    For args descriptions, see:
-    https://cloud.google.com/functions/docs/writing/background#function_parameters
-
-    This function is intended to be triggered by Pub/Sub messages, via Cloud Functions.
-
-    Args:
-        msg: Pub/Sub message data and attributes.
-            `data` field contains the message data in a base64-encoded string.
-            `attributes` field contains the message's custom attributes in a dict.
-
-        context: The Cloud Function's event metadata.
-            It has the following attributes:
-                `event_id`: the Pub/Sub message ID.
-                `timestamp`: the Pub/Sub message publish time.
-                `event_type`: for example: "google.pubsub.topic.publish".
-                `resource`: the resource that emitted the event.
-            This argument is not currently used in this function, but the argument is
-            required by Cloud Functions, which will call it.
-    """
-    alert_dict = open_alert(msg["data"])
-    attrs = msg["attributes"]
-
-    # create the message for elasticc and publish the stream
-    avro = _create_elasticc_msg(alert_dict, attrs)
-    gcp_utils.publish_pubsub(ps_topic, avro, attrs=attrs)
-
-
 def _create_elasticc_msg(alert_dict, attrs):
     """Create a message according to the ELAsTiCC broker classifications schema.
     https://github.com/LSSTDESC/plasticc_alerts/blob/main/Examples/plasticc_schema
@@ -226,7 +199,6 @@ def _create_elasticc_msg(alert_dict, attrs):
 
     # avro serialize the dictionary
     avro = _dict_to_avro(msg, schema_out)
-
     return avro
 
 def _dict_to_avro(msg: dict, schema: dict):
