@@ -90,13 +90,13 @@ def run(msg: dict, context) -> None:
     # if something goes wrong, let's just log it and exit gracefully
     # once we know more about what might go wrong, we can make this more specific
     except Exception as e:
-        logger.log_text(f"Classify error: {e}", severity="DEBUG")
+        logger.log_text(f"Classify error: {e}", severity="WARNING")
 
     else:
         # store in bigquery
         errors = gcp_utils.insert_rows_bigquery(bq_table, [snn_dict])
         if len(errors) > 0:
-            logger.log_text(f"BigQuery insert error: {errors}", severity="DEBUG")
+            logger.log_text(f"BigQuery insert error: {errors}", severity="WARNING")
 
     # create the message for elasticc and publish the stream
     avro = _create_elasticc_msg(dict(alert=alert_dict, SuperNNova=snn_dict), attrs)
