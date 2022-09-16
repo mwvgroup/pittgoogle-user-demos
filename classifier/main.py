@@ -93,17 +93,13 @@ def run(msg: dict, context) -> None:
         logger.log_text(f"Classify error: {e}", severity="DEBUG")
 
     else:
-        # announce to pubsub
-        gcp_utils.publish_pubsub(
-            ps_topic, dict(alert=alert_dict, SuperNNova=snn_dict), attrs=attrs)
-
         # store in bigquery
         errors = gcp_utils.insert_rows_bigquery(bq_table, [snn_dict])
         if len(errors) > 0:
             logger.log_text(f"BigQuery insert error: {errors}", severity="DEBUG")
 
     # create the message for elasticc and publish the stream
-    avro = _create_elasticc_msg(alert_dict, attrs)
+    avro = _create_elasticc_msg(dict(alert=alert_dict, SuperNNova=snn_dict), attrs)
     gcp_utils.publish_pubsub(ps_topic, avro, attrs=attrs)
 
 def _classify_with_snn(alert_dict: dict) -> dict:
