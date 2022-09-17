@@ -169,7 +169,7 @@ def _create_elasticc_msg(alert_dict, attrs):
 
     # here are a few things you'll need
     elasticcPublishTimestamp = int(attrs["kafka.timestamp"])
-    brokerIngestTimestamp = attrs["brokerIngestTimestamp"]
+    brokerIngestTimestamp = attrs.pop("brokerIngestTimestamp")
     brokerVersion = "v0.6"
 
     classifications = [
