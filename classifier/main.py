@@ -169,7 +169,7 @@ def _create_elasticc_msg(alert_dict, attrs):
 
     # here are a few things you'll need
     elasticcPublishTimestamp = int(attrs["kafka.timestamp"])
-    brokerIngestTimestamp = int(attrs["brokerIngestTimestamp"])  # Troy: attach this in first module
+    brokerIngestTimestamp = attrs["brokerIngestTimestamp"]
     brokerVersion = "v0.6"
 
     classifications = [
@@ -200,7 +200,7 @@ def _create_elasticc_msg(alert_dict, attrs):
 def _dict_to_avro(msg: dict, schema: dict):
     """Avro serialize a dictionary."""
     fout = io.BytesIO()
-    fastavro.writer(fout, schema, [msg])
+    fastavro.schemaless_writer(fout, schema, [msg])
     fout.seek(0)
     avro = fout.getvalue()
     return avro
