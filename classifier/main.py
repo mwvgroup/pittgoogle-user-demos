@@ -200,7 +200,7 @@ def _create_elasticc_msg(alert_dict, attrs):
 def _dict_to_avro(msg: dict, schema: dict):
     """Avro serialize a dictionary."""
     fout = io.BytesIO()
-    fastavro.schemaless_writer(fout, schema, [msg])
+    fastavro.schemaless_writer(fout, schema, msg)
     fout.seek(0)
     avro = fout.getvalue()
     return avro
