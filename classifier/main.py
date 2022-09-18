@@ -71,11 +71,11 @@ def run(msg: dict, context) -> None:
             This argument is not currently used in this function, but the argument is
             required by Cloud Functions, which will call it.
     """
-    
+
     alert_dict = open_alert(msg["data"], load_schema="elasticc.v0_9.alert.avsc")
 
     a_ids = alert_ids.extract_ids(alert_dict=alert_dict)
-    
+
     attrs = {
         **msg["attributes"],
         "brokerIngestTimestamp": context.timestamp,
@@ -83,20 +83,12 @@ def run(msg: dict, context) -> None:
         id_keys.sourceId: str(a_ids.sourceId),
     }
 
-    # classify
-    try:
-        snn_dict = _classify_with_snn(alert_dict)
+    snn_dict = _classify_with_snn(alert_dict)
 
-    # if something goes wrong, let's just log it and exit gracefully
-    # once we know more about what might go wrong, we can make this more specific
-    except Exception as e:
-        logger.log_text(f"Classify error: {e}", severity="WARNING")
-
-    else:
-        # store in bigquery
-        errors = gcp_utils.insert_rows_bigquery(bq_table, [snn_dict])
-        if len(errors) > 0:
-            logger.log_text(f"BigQuery insert error: {errors}", severity="WARNING")
+    errors = gcp_utils.insert_rows_bigquery(bq_table, [snn_dict])
+    if len(errors) > 0:
+        # logger.log_text(f"BigQuery insert error: {errors}", severity="WARNING")
+        print(f"BigQuery insert error: {errors}")
 
     # create the message for elasticc and publish the stream
     avro = _create_elasticc_msg(dict(alert=alert_dict, SuperNNova=snn_dict), attrs)
@@ -178,7 +170,7 @@ def _create_elasticc_msg(alert_dict, attrs):
             # Chris: fill these two in. classIds are listed here:
             #        https://docs.google.com/presentation/d/1FwOdELG-XgdNtySeIjF62bDRVU5EsCToi2Svo_kXA50/edit#slide=id.ge52201f94a_0_12
             "classifierParams": "",  # leave this blank for now
-            "classId": 111120,
+            "classId": 111,
             "probability": supernnova_results["prob_class0"],
         },
     ]
