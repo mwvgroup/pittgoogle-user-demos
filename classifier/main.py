@@ -21,6 +21,8 @@ from broker_utils.types import AlertIds
 from broker_utils.schema_maps import load_schema_map, get_value
 from broker_utils.data_utils import open_alert
 
+from flask import Flask, request
+
 
 PROJECT_ID = os.getenv("GCP_PROJECT")
 TESTID = os.getenv("TESTID")
@@ -48,7 +50,8 @@ model_dir_name = "ZTF_DMAM_V19_NoC_SNIa_vs_CC_forFink"
 model_file_name = "vanilla_S_0_CLF_2_R_none_photometry_DF_1.0_N_global_lstm_32x2_0.05_128_True_mean.pt"
 model_path = Path(__file__).resolve().parent / f"{model_dir_name}/{model_file_name}"
 
-
+app = Flask(__name__)
+@app.route("/", methods=["POST"])
 def run(msg: dict, context) -> None:
     """Classify alert with SuperNNova; publish and store results.
 
@@ -72,35 +75,37 @@ def run(msg: dict, context) -> None:
             required by Cloud Functions, which will call it.
     """
     
-    alert_dict = open_alert(msg["data"], load_schema="elasticc.v0_9.alert.avsc")
+    #alert_dict = open_alert(msg["data"], load_schema="elasticc.v0_9.alert.avsc")
 
     a_ids = alert_ids.extract_ids(alert_dict=alert_dict)
     
-    attrs = {
-        **msg["attributes"],
-        "brokerIngestTimestamp": context.timestamp,
-        id_keys.objectId: str(a_ids.objectId),
-        id_keys.sourceId: str(a_ids.sourceId),
-    }
+    # attrs = {
+    #     **msg["attributes"],
+    #     "brokerIngestTimestamp": context.timestamp,
+    #     id_keys.objectId: str(a_ids.objectId),
+    #     id_keys.sourceId: str(a_ids.sourceId),
+    # }
 
     # classify
-    try:
-        snn_dict = _classify_with_snn(alert_dict)
+    #try:
+    snn_dict = _classify_with_snn(alert_dict)
 
     # if something goes wrong, let's just log it and exit gracefully
     # once we know more about what might go wrong, we can make this more specific
-    except Exception as e:
-        logger.log_text(f"Classify error: {e}", severity="WARNING")
+    #except Exception as e:
+    logger.log_text(f"Classify error: {e}", severity="WARNING")
 
-    else:
+    #else:
         # store in bigquery
-        errors = gcp_utils.insert_rows_bigquery(bq_table, [snn_dict])
-        if len(errors) > 0:
-            logger.log_text(f"BigQuery insert error: {errors}", severity="WARNING")
+    errors = gcp_utils.insert_rows_bigquery(bq_table, [snn_dict])
+    if len(errors) > 0:
+        logger.log_text(f"BigQuery insert error: {errors}", severity="WARNING")
 
     # create the message for elasticc and publish the stream
     avro = _create_elasticc_msg(dict(alert=alert_dict, SuperNNova=snn_dict), attrs)
     gcp_utils.publish_pubsub(ps_topic, avro, attrs=attrs)
+
+    return ("", 204)
 
 def _classify_with_snn(alert_dict: dict) -> dict:
     """Classify the alert using SuperNNova."""
@@ -169,7 +174,7 @@ def _create_elasticc_msg(alert_dict, attrs):
 
     # here are a few things you'll need
     elasticcPublishTimestamp = int(attrs["kafka.timestamp"])
-    brokerIngestTimestamp = int(attrs["brokerIngestTimestamp"])  # Troy: attach this in first module
+    brokerIngestTimestamp = attrs.pop("brokerIngestTimestamp")
     brokerVersion = "v0.6"
 
     classifications = [
@@ -178,7 +183,7 @@ def _create_elasticc_msg(alert_dict, attrs):
             # Chris: fill these two in. classIds are listed here:
             #        https://docs.google.com/presentation/d/1FwOdELG-XgdNtySeIjF62bDRVU5EsCToi2Svo_kXA50/edit#slide=id.ge52201f94a_0_12
             "classifierParams": "",  # leave this blank for now
-            "classId": 111120,
+            "classId": 111,
             "probability": supernnova_results["prob_class0"],
         },
     ]
@@ -200,7 +205,7 @@ def _create_elasticc_msg(alert_dict, attrs):
 def _dict_to_avro(msg: dict, schema: dict):
     """Avro serialize a dictionary."""
     fout = io.BytesIO()
-    fastavro.writer(fout, schema, [msg])
+    fastavro.schemaless_writer(fout, schema, msg)
     fout.seek(0)
     avro = fout.getvalue()
     return avro
