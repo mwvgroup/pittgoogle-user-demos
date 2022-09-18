@@ -6,6 +6,7 @@ natsort
 pgb-broker-utils==0.2.43
 scikit-learn
 seaborn
+=======
 supernnova==1.3
 https://download.pytorch.org/whl/cpu/torch-1.9.0%2Bcpu-cp37-cp37m-linux_x86_64.whl
 # cloud fncs don't support GPUs
