@@ -41,8 +41,9 @@ if TESTID != "False":  # attach the testid to the names
     ps_topic = f"{ps_topic}-{TESTID}"
 bq_table = f"{bq_dataset}.SuperNNova"
 
-schema_map = load_schema_map(SURVEY, TESTID)
 schema_out = fastavro.schema.load_schema("elasticc.v0_9.brokerClassfication.avsc")
+workingdir = Path(__file__).resolve().parent
+schema_map = load_schema_map(SURVEY, TESTID, schema=(workingdir / "elasticc-schema-map.yml"))
 alert_ids = AlertIds(schema_map)
 id_keys = alert_ids.id_keys
 
