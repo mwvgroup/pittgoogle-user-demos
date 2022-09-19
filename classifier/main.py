@@ -4,6 +4,7 @@
 """Classify alerts using SuperNNova (M¨oller & de Boissi`ere 2019)."""
 
 import base64
+from datetime import datetime
 import io
 import os
 
@@ -82,7 +83,7 @@ def run(msg: dict, context) -> None:
     
     # attrs = {
     #     **msg["attributes"],
-    #     "brokerIngestTimestamp": context.timestamp,
+    #     "brokerIngestTimestamp": datetime.strptime(msg["publish_time"], '%Y-%m-%dT%H:%M:%S.%fZ'),
     #     id_keys.objectId: str(a_ids.objectId),
     #     id_keys.sourceId: str(a_ids.sourceId),
     # }
