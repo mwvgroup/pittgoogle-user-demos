@@ -3,13 +3,13 @@
 
 """Classify alerts using SuperNNova (M¨oller & de Boissi`ere 2019)."""
 
-import base64
+# import base64
 from datetime import datetime
 import io
 import os
 
 from google.cloud import logging
-import json
+# import json
 import fastavro
 
 import numpy as np
@@ -28,21 +28,22 @@ from flask import Flask, request
 PROJECT_ID = os.getenv("GCP_PROJECT")
 TESTID = os.getenv("TESTID")
 SURVEY = os.getenv("SURVEY")
+K_SERVICE = os.getenv("K_SERVICE")  # name of this cloud run service
 
 # connect to the logger
 logging_client = logging.Client()
-log_name = "classify-snn-cloudfnc"  # same log for all broker instances
+log_name = f"${K_SERVICE}"
 logger = logging_client.logger(log_name)
 
 # GCP resources used in this module
 bq_dataset = f"{SURVEY}_alerts"
-ps_topic = f"{SURVEY}-SuperNNova"
+# ps_topic = f"{SURVEY}-SuperNNova"
+ps_topic = "class-loop"
 if TESTID != "False":  # attach the testid to the names
     bq_dataset = f"{bq_dataset}_{TESTID}"
-    ps_topic = f"{ps_topic}-{TESTID}"
+    # ps_topic = f"{ps_topic}-{TESTID}"
 bq_table = f"{bq_dataset}.SuperNNova"
 
-schema_out = fastavro.schema.load_schema("elasticc.v0_9.brokerClassfication.avsc")
 workingdir = Path(__file__).resolve().parent
 schema_map = load_schema_map(SURVEY, TESTID, schema=(workingdir / "elasticc-schema-map.yml"))
 alert_ids = AlertIds(schema_map)
@@ -50,37 +51,35 @@ id_keys = alert_ids.id_keys
 
 model_dir_name = "ZTF_DMAM_V19_NoC_SNIa_vs_CC_forFink"
 model_file_name = "vanilla_S_0_CLF_2_R_none_photometry_DF_1.0_N_global_lstm_32x2_0.05_128_True_mean.pt"
-model_path = Path(__file__).resolve().parent / f"{model_dir_name}/{model_file_name}"
+model_path = workingdir / f"{model_dir_name}/{model_file_name}"
+
+schema_out = fastavro.schema.load_schema("elasticc.v0_9.brokerClassfication.avsc")
+
 
 app = Flask(__name__)
 @app.route("/", methods=["POST"])
-def run(msg: dict, context) -> None:
-    """Classify alert with SuperNNova; publish and store results.
+def run() -> None:
+    """."""
+    envelope = request.get_json()
 
-    For args descriptions, see:
-    https://cloud.google.com/functions/docs/writing/background#function_parameters
+    # do some checks
+    if not envelope:
+        msg = "no Pub/Sub message received"
+        print(f"error: {msg}")
+        return f"Bad Request: {msg}", 400
 
-    This function is intended to be triggered by Pub/Sub messages, via Cloud Functions.
+    if not isinstance(envelope, dict) or "message" not in envelope:
+        msg = "invalid Pub/Sub message format"
+        print(f"error: {msg}")
+        return f"Bad Request: {msg}", 400
 
-    Args:
-        msg: Pub/Sub message data and attributes.
-            `data` field contains the message data in a base64-encoded string.
-            `attributes` field contains the message's custom attributes in a dict.
+    # unpack the alert
+    msg = envelope["message"]
 
-        context: The Cloud Function's event metadata.
-            It has the following attributes:
-                `event_id`: the Pub/Sub message ID.
-                `timestamp`: the Pub/Sub message publish time.
-                `event_type`: for example: "google.pubsub.topic.publish".
-                `resource`: the resource that emitted the event.
-            This argument is not currently used in this function, but the argument is
-            required by Cloud Functions, which will call it.
-    """
-    
-    #alert_dict = open_alert(msg["data"], load_schema="elasticc.v0_9.alert.avsc")
+    alert_dict = open_alert(msg["data"], load_schema="elasticc.v0_9.alert.avsc")
 
     a_ids = alert_ids.extract_ids(alert_dict=alert_dict)
-    
+
     # attrs = {
     #     **msg["attributes"],
     #     "brokerIngestTimestamp": datetime.strptime(msg["publish_time"], '%Y-%m-%dT%H:%M:%S.%fZ'),
@@ -95,13 +94,13 @@ def run(msg: dict, context) -> None:
     # if something goes wrong, let's just log it and exit gracefully
     # once we know more about what might go wrong, we can make this more specific
     #except Exception as e:
-    logger.log_text(f"Classify error: {e}", severity="WARNING")
+    # logger.log_text(f"Classify error: {e}", severity="WARNING")
 
     #else:
         # store in bigquery
-    errors = gcp_utils.insert_rows_bigquery(bq_table, [snn_dict])
-    if len(errors) > 0:
-        logger.log_text(f"BigQuery insert error: {errors}", severity="WARNING")
+    # errors = gcp_utils.insert_rows_bigquery(bq_table, [snn_dict])
+    # if len(errors) > 0:
+    #     logger.log_text(f"BigQuery insert error: {errors}", severity="WARNING")
 
     # create the message for elasticc and publish the stream
     avro = _create_elasticc_msg(dict(alert=alert_dict, SuperNNova=snn_dict), attrs)
@@ -175,7 +174,7 @@ def _create_elasticc_msg(alert_dict, attrs):
     supernnova_results = alert_dict["SuperNNova"]
 
     # here are a few things you'll need
-    elasticcPublishTimestamp = int(attrs["kafka.timestamp"])
+    elasticcPublishTimestamp = float(attrs["kafka.timestamp"])
     brokerIngestTimestamp = attrs.pop("brokerIngestTimestamp")
     brokerVersion = "v0.6"
 
@@ -199,6 +198,8 @@ def _create_elasticc_msg(alert_dict, attrs):
         "brokerVersion": brokerVersion,
         "classifications": classifications
     }
+
+    print(msg)
 
     # avro serialize the dictionary
     avro = _dict_to_avro(msg, schema_out)
