@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 # Create and configure GCP resources needed to deploy Cloud Run
 
-# not sure if I'm going to use this, but I've added it for now
+# setup
 testid="${testid}"
 teardown="${teardown}"
 survey="${survey}"
-
-# setup
 PROJECT_ID="${GOOGLE_CLOUD_PROJECT}"
 docker_compose = "cloudbuild.yaml"
 
@@ -27,6 +25,7 @@ fi
 echo "Configuring BigQuery, Pub/Sub resources for Cloud Run..."
 
 # create pub/sub (trigger) topics and subscriptions
+gcloud pubsub topics create ""
 gcloud pubsub topics create "${pubsub_trigger_topic}"
 gcloud pubsub subscriptions create "${cloud_run_trigger_subscription}" --topic "${pubsub_trigger_topic}"
 

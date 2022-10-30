@@ -1,4 +1,5 @@
 colorama
+docker
 google-cloud-functions
 google-cloud-logging
 gunicorn
