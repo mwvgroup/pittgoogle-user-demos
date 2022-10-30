@@ -3,6 +3,7 @@
 
 # setup
 PROJECT_ID="${GOOGLE_CLOUD_PROJECT}"
+
 # get the project number. don't know why this is so cumbersome
 PROJECT_NUMBER=$(gcloud projects list \
     --filter="$(gcloud config get-value project)" \
@@ -68,8 +69,3 @@ gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
    --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-pubsub.iam.gserviceaccount.com" \
    --role="roles/iam.serviceAccountTokenCreator"
-
-# additional work to be done:
-#    - [ ] create the necessary Pub/Sub topic(s) and subscription(s)
-#    - create the BigQuery dataset and table(s)
-#    - instruct Cloud Build to containerize the module and deploy it to Cloud Run
