@@ -36,6 +36,25 @@ echo "Creating container image and deploying to Cloud Run..."
 moduledir="classifier"  # assumes we're in the repo's root dir
 config="${moduledir}/cloudbuild.yaml"
 gcloud builds submit --config="${config}" \
-    --substitutions=_SURVEY="${SURVEY}",_TESTID="${TESTID}" \
+    --substitutions=_SURVEY="${survey}",_TESTID="${testid}" \
     "${moduledir}"
 
+subscrip="elasticc-loop-${testid}"
+topic="elasticc-loop"
+topic_project="avid-heading-329016"
+
+# the URL must be manually copy-pasted into the following code in order to create the subscription:
+
+# url="<copy-paste the Cloud Run URL here>"
+# route="/"
+# runinvoker_svcact="cloud-run-invoker@${GOOGLE_CLOUD_PROJECT}.iam.gserviceaccount.com"
+
+# gcloud pubsub subscriptions create "${subscrip}" \
+#     --topic "${topic}" \
+#     --topic-project "${topic_project}" \
+#     --ack-deadline=600 \
+#     --push-endpoint="${url}${route}" \
+#     --push-auth-service-account="${runinvoker_svcact}"
+
+#to stop the Cloud Run module, you must delete the trigger subscription:
+# gcloud pubsub subscriptions delete "${subscrip}"
