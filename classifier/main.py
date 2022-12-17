@@ -80,7 +80,7 @@ def index():
     
     attrs = {
         **msg["attributes"],
-        "brokerIngestTimestamp": datetime.strptime(msg["publish_time"].replace("Z","+00:00"), '%Y-%m-%dT%H:%M:%S%z'),
+        "brokerIngestTimestamp": datetime.strptime(msg["publish_time"].replace("Z","+00:00"), '%Y-%m-%dT%H:%M:%S.%f%z'),
         id_keys.objectId: str(a_ids.objectId),
         id_keys.sourceId: str(a_ids.sourceId),
     }
