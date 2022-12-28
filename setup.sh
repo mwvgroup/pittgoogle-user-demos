@@ -19,17 +19,27 @@ if [ "$testid" != "False" ]; then
     bq_dataset="${bq_dataset}_${testid}"
 fi
 
-# create the necessary Pub/Sub topic(s) and subscription(s)
-echo "Configuring BigQuery, Pub/Sub resources for Cloud Run..."
+# create BigQuery, Pub/Sub resources
+if [ "${teardown}" != "True" ]; then
+    echo "Configuring BigQuery, Pub/Sub resources for Cloud Run..."
+    # create pub/sub topics and subscriptions
+    gcloud pubsub topics create "${pubsub_trigger_topic}"
+    gcloud pubsub topics create "${pubsub_SuperNNova_topic}"
 
-# create pub/sub topics and subscriptions
-gcloud pubsub topics create "${pubsub_trigger_topic}"
-gcloud pubsub topics create "${pubsub_SuperNNova_topic}"
+    # create the BigQuery dataset and table
+    bq mk --dataset "${bq_dataset}"
+    #want to double check with you regarding the next two lines
+    bq mk --table "${bq_dataset}.${alerts_table}" "templates/bq_${survey}_${alerts_table}_schema.json"
 
-# create the BigQuery dataset and table
-bq mk --dataset "${bq_dataset}"
-#want to double check with you regarding the next two lines
-bq mk --table "${bq_dataset}.${alerts_table}" "templates/bq_${survey}_${alerts_table}_schema.json"
+else
+    # ensure that we do not teardown production resources
+    if [ "${testid}" != "False" ]; then
+        echo "Removing BigQuery, Pub/Sub resources for Cloud Run..."
+        gcloud pubsub topics delete "${pubsub_trigger_topic}"
+        gcloud pubsub topics delete "${pubsub_SuperNNova_topic}"
+        bq rm --dataset true "${bq_dataset}"
+    fi
+fi
 
 # Deploy Cloud Run
 echo "Creating container image and deploying to Cloud Run..."
@@ -43,7 +53,8 @@ subscrip="elasticc-loop-${testid}"
 topic="elasticc-loop"
 topic_project="avid-heading-329016"
 
-# the URL must be manually copy-pasted into the following code in order to create the subscription:
+# the URL must be manually copy-pasted into the following code in order to create the subscription
+# We need to automate this in the near future
 
 # url="<copy-paste the Cloud Run URL here>"
 # route="/"

@@ -92,7 +92,7 @@ def index():
     # if something goes wrong, let's just log it and exit gracefully
     # once we know more about what might go wrong, we can make this more specific
     #except Exception as e:
-    logger.log_text(f"Classify error: {e}", severity="WARNING")
+    #logger.log_text(f"Classify error: {e}", severity="WARNING")
 
     #else:
         # store in bigquery
