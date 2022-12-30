@@ -12,11 +12,15 @@ pubsub_trigger_topic="${survey}-alerts"
 pubsub_SuperNNova_topic="${survey}-SuperNNova"
 bq_dataset="${PROJECT_ID}:${survey}_alerts"
 alerts_table="SuperNNova"
+subscrip="elasticc-loop"
+topic="elasticc-loop"
+topic_project="avid-heading-329016"
 
 if [ "$testid" != "False" ]; then
     pubsub_trigger_topic="${pubsub_trigger_topic}-${testid}"
     pubsub_SuperNNova_topic="${pubsub_SuperNNova_topic}-${testid}"
     bq_dataset="${bq_dataset}_${testid}"
+    subscrip="elasticc-loop-${testid}"
 fi
 
 # create BigQuery, Pub/Sub resources
@@ -36,6 +40,7 @@ else
         echo "Removing BigQuery, Pub/Sub resources for Cloud Run..."
         gcloud pubsub topics delete "${pubsub_trigger_topic}"
         gcloud pubsub topics delete "${pubsub_SuperNNova_topic}"
+        gcloud pubsub subscriptions delete "${subscrip}"
         bq rm --table "${bq_dataset}.${alerts_table}"
         bq rm --dataset true "${bq_dataset}"
     fi
@@ -49,13 +54,7 @@ gcloud builds submit --config="${config}" \
     --substitutions=_SURVEY="${survey}",_TESTID="${testid}" \
     "${moduledir}"
 
-subscrip="elasticc-loop-${testid}"
-topic="elasticc-loop"
-topic_project="avid-heading-329016"
-
-# the URL must be manually copy-pasted into the following code in order to create the subscription
-# We need to automate this in the near future
-
+# the URL must be manually copy-pasted into the following code in order to create the subscription (we need to automate this)
 # url="<copy-paste the Cloud Run URL here>"
 # route="/"
 # runinvoker_svcact="cloud-run-invoker@${GOOGLE_CLOUD_PROJECT}.iam.gserviceaccount.com"
