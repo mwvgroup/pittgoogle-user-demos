@@ -12,7 +12,7 @@ pubsub_trigger_topic="${survey}-alerts"
 pubsub_SuperNNova_topic="${survey}-SuperNNova"
 bq_dataset="${PROJECT_ID}:${survey}_alerts"
 alerts_table="SuperNNova"
-subscrip="elasticc-loop"
+subscrip="elasticc-loop" #used to trigger Cloud Run module
 topic="elasticc-loop"
 topic_project="avid-heading-329016"
 
