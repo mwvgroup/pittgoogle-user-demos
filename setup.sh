@@ -28,7 +28,6 @@ if [ "${teardown}" != "True" ]; then
 
     # create the BigQuery dataset and table
     bq mk --dataset "${bq_dataset}"
-    #want to double check with you regarding the next two lines
     bq mk --table "${bq_dataset}.${alerts_table}" "templates/bq_${survey}_${alerts_table}_schema.json"
 
 else
@@ -37,6 +36,7 @@ else
         echo "Removing BigQuery, Pub/Sub resources for Cloud Run..."
         gcloud pubsub topics delete "${pubsub_trigger_topic}"
         gcloud pubsub topics delete "${pubsub_SuperNNova_topic}"
+        bq rm --table "${bq_dataset}.${alerts_table}"
         bq rm --dataset true "${bq_dataset}"
     fi
 fi
