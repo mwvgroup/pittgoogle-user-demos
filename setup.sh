@@ -18,7 +18,7 @@ subscrip="elasticc-loop" #used to trigger Cloud Run module
 topic="elasticc-loop"
 topic_project="avid-heading-329016"
 
-if [ "$testid" != "false" ]; then
+if [ "$testid" != "False" ]; then
     pubsub_trigger_topic="${pubsub_trigger_topic}-${testid}"
     pubsub_SuperNNova_topic="${pubsub_SuperNNova_topic}-${testid}"
     bq_dataset="${bq_dataset}_${testid}"
@@ -45,7 +45,7 @@ if [ "${teardown}" != "True" ]; then
     #     "${moduledir}"
     url=$(gcloud builds submit --config="${config}" \
         --substitutions=_SURVEY="${survey}",_TESTID="${testid}" \
-        "${moduledir}" | grep "Service [^ ]* is running" | awk '{print $2}')
+        "${moduledir}" | sed -n 's/^Step #2: Service URL: \(.*\)$/\1/p')
     
     echo "Creating trigger subscription for Cloud Run"
     gcloud pubsub subscriptions create "${subscrip}" \
@@ -62,7 +62,6 @@ else
         gcloud pubsub topics delete "${pubsub_trigger_topic}"
         gcloud pubsub topics delete "${pubsub_SuperNNova_topic}"
         gcloud pubsub subscriptions delete "${subscrip}" #needed to stop the Cloud Run module
-        bq rm --table "${bq_dataset}.${alerts_table}"
-        bq rm --dataset true "${bq_dataset}"
+        bq rm --dataset=true "${bq_dataset}" #deleting a dataset also deletes all the tables in that dataset
     fi
 fi
