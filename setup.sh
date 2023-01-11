@@ -18,7 +18,7 @@ subscrip="elasticc-loop" #used to trigger Cloud Run module
 topic="elasticc-loop"
 topic_project="avid-heading-329016"
 
-if [ "$testid" != "False" ]; then
+if [ "$testid" != "false" ]; then
     pubsub_trigger_topic="${pubsub_trigger_topic}-${testid}"
     pubsub_SuperNNova_topic="${pubsub_SuperNNova_topic}-${testid}"
     bq_dataset="${bq_dataset}_${testid}"
