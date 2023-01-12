@@ -5,6 +5,8 @@
 testid="${1:-test}"
 teardown="${2:-False}"
 survey="${3:-elasticc}"
+trigger_topic="${4:-elasticc-alerts}"
+trigger_topic_project="${5:-avid-heading-329016}"
 PROJECT_ID="${GOOGLE_CLOUD_PROJECT}"
 
 # GCP resources & variables used in this script that need a testid
@@ -26,8 +28,6 @@ module_image_name="gcr.io/${PROJECT_ID}/${module_name}"
 region="us-central1"
 route="/"
 runinvoker_svcact="cloud-run-invoker@${PROJECT_ID}.iam.gserviceaccount.com"
-topic="elasticc-loop"
-topic_project="avid-heading-329016"
 
 # create BigQuery, Pub/Sub resources
 if [ "${teardown}" != "True" ]; then
@@ -49,8 +49,8 @@ if [ "${teardown}" != "True" ]; then
     
     echo "Creating trigger subscription for Cloud Run"
     gcloud pubsub subscriptions create "${subscrip}" \
-        --topic "${topic}" \
-        --topic-project "${topic_project}" \
+        --topic "${trigger_topic}" \
+        --topic-project "${trigger_topic_project}" \
         --ack-deadline=600 \
         --push-endpoint="${url}${route}" \
         --push-auth-service-account="${runinvoker_svcact}"
@@ -64,6 +64,6 @@ else
         bq rm --table "${bq_dataset}.${alerts_table}"
         bq rm --dataset=true "${bq_dataset}"
         gcloud run services delete "${module_name}" --region "${region}"
-        gcloud container images delete "${module_image_name}" 
+        gcloud container images delete "${module_image_name}"
     fi
 fi
