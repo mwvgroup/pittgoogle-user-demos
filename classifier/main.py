@@ -78,9 +78,14 @@ def index():
     alert_dict = open_alert(msg["data"], load_schema="elasticc.v0_9.alert.avsc")
     a_ids = alert_ids.extract_ids(alert_dict=alert_dict)
     
+    try:
+        publish_time = datetime.strptime(msg["publish_time"].replace("Z","+00:00"), '%Y-%m-%dT%H:%M:%S.%f%z')
+    except ValueError:
+        publish_time = datetime.strptime(msg["publish_time"].replace("Z","+00:00"), '%Y-%m-%dT%H:%M:%S%z')
+
     attrs = {
         **msg["attributes"],
-        "brokerIngestTimestamp": datetime.strptime(msg["publish_time"].replace("Z","+00:00"), '%Y-%m-%dT%H:%M:%S.%f%z'),
+        "brokerIngestTimestamp": publish_time,
         id_keys.objectId: str(a_ids.objectId),
         id_keys.sourceId: str(a_ids.sourceId),
     }

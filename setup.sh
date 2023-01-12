@@ -7,29 +7,32 @@ teardown="${2:-False}"
 survey="${3:-elasticc}"
 PROJECT_ID="${GOOGLE_CLOUD_PROJECT}"
 
-# GCP resources used in this script
-alerts_table="SuperNNova"
+# GCP resources & variables used in this script that need a testid
 bq_dataset="${PROJECT_ID}:${survey}_alerts"
 pubsub_SuperNNova_topic="${survey}-SuperNNova"
-pubsub_trigger_topic="${survey}-alerts"
-route="/"
-runinvoker_svcact="cloud-run-invoker@${GOOGLE_CLOUD_PROJECT}.iam.gserviceaccount.com"
-subscrip="elasticc-loop" #used to trigger Cloud Run module
-topic="elasticc-loop"
-topic_project="avid-heading-329016"
+module_name="${survey}-classifier"
+subscrip="elasticc-loop" #pub/sub subscription used to trigger Cloud Run module
 
 if [ "$testid" != "False" ]; then
-    pubsub_trigger_topic="${pubsub_trigger_topic}-${testid}"
-    pubsub_SuperNNova_topic="${pubsub_SuperNNova_topic}-${testid}"
     bq_dataset="${bq_dataset}_${testid}"
+    pubsub_SuperNNova_topic="${pubsub_SuperNNova_topic}-${testid}"
+    module_name="${module_name}-${testid}"
     subscrip="elasticc-loop-${testid}"
 fi
+
+# additional GCP resources & variables used in this script
+alerts_table="SuperNNova"
+module_image_name="gcr.io/${PROJECT_ID}/${module_name}"
+region="us-central1"
+route="/"
+runinvoker_svcact="cloud-run-invoker@${PROJECT_ID}.iam.gserviceaccount.com"
+topic="elasticc-loop"
+topic_project="avid-heading-329016"
 
 # create BigQuery, Pub/Sub resources
 if [ "${teardown}" != "True" ]; then
     echo "Configuring BigQuery, Pub/Sub resources for Cloud Run..."
     # create pub/sub topics and subscriptions
-    gcloud pubsub topics create "${pubsub_trigger_topic}"
     gcloud pubsub topics create "${pubsub_SuperNNova_topic}"
 
     # create the BigQuery dataset and table
@@ -40,11 +43,8 @@ if [ "${teardown}" != "True" ]; then
     echo "Creating container image and deploying to Cloud Run..."
     moduledir="classifier"  # assumes we're in the repo's root dir
     config="${moduledir}/cloudbuild.yaml"
-    # gcloud builds submit --config="${config}" \
-    #     --substitutions=_SURVEY="${survey}",_TESTID="${testid}" \
-    #     "${moduledir}"
     url=$(gcloud builds submit --config="${config}" \
-        --substitutions=_SURVEY="${survey}",_TESTID="${testid}" \
+        --substitutions=_SURVEY="${survey}",_TESTID="-${testid}" \
         "${moduledir}" | sed -n 's/^Step #2: Service URL: \(.*\)$/\1/p')
     
     echo "Creating trigger subscription for Cloud Run"
@@ -59,9 +59,11 @@ else
     # ensure that we do not teardown production resources
     if [ "${testid}" != "False" ]; then
         echo "Removing BigQuery, Pub/Sub resources for Cloud Run..."
-        gcloud pubsub topics delete "${pubsub_trigger_topic}"
         gcloud pubsub topics delete "${pubsub_SuperNNova_topic}"
-        gcloud pubsub subscriptions delete "${subscrip}" #needed to stop the Cloud Run module
-        bq rm --dataset=true "${bq_dataset}" #deleting a dataset also deletes all the tables in that dataset
+        gcloud pubsub subscriptions delete "${subscrip}" # needed to stop the Cloud Run module
+        bq rm --table "${bq_dataset}.${alerts_table}"
+        bq rm --dataset=true "${bq_dataset}"
+        gcloud run services delete "${module_name}" --region "${region}"
+        gcloud container images delete "${module_image_name}" 
     fi
 fi
