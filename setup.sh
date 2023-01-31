@@ -3,23 +3,47 @@
 
 # setup
 testid="${1:-test}"
-teardown="${2:-False}"
-survey="${3:-elasticc}"
+survey="${2:-elasticc}"
+teardown="${3:-False}"
 trigger_topic="${4:-elasticc-alerts}"
 trigger_topic_project="${5:-avid-heading-329016}"
+
 PROJECT_ID="${GOOGLE_CLOUD_PROJECT}"
+
+#--- Make the user confirm the settings
+echo
+echo "setup.sh will run with the following configs: "
+echo
+echo "testid = ${testid}"
+echo "survey = ${survey}"
+echo "teardown = ${teardown}"
+echo "trigger_topic = ${trigger_topic}"
+echo "trigger_topic_project = ${trigger_topic_project}"
+echo "GOOGLE_CLOUD_PROJECT = ${PROJECT_ID}"
+echo
+echo "Continue?  [y/(n)]: "
+
+read input
+input="${input:-n}"
+if [ "${input}" != "y" ]; then
+    echo "Exiting setup."
+    echo
+    exit
+fi
 
 # GCP resources & variables used in this script that need a testid
 bq_dataset="${PROJECT_ID}:${survey}_alerts"
 pubsub_SuperNNova_topic="${survey}-SuperNNova"
 module_name="${survey}-classifier"
-subscrip="elasticc-loop" #pub/sub subscription used to trigger Cloud Run module
+subscrip="${trigger_topic}" #pub/sub subscription used to trigger Cloud Run module
+yamltestid=""
 
 if [ "$testid" != "False" ]; then
     bq_dataset="${bq_dataset}_${testid}"
     pubsub_SuperNNova_topic="${pubsub_SuperNNova_topic}-${testid}"
     module_name="${module_name}-${testid}"
-    subscrip="elasticc-loop-${testid}"
+    subscrip="${subscrip}-${testid}"
+    yamltestid="-${testid}"
 fi
 
 # additional GCP resources & variables used in this script
@@ -44,9 +68,9 @@ if [ "${teardown}" != "True" ]; then
     moduledir="classifier"  # assumes we're in the repo's root dir
     config="${moduledir}/cloudbuild.yaml"
     url=$(gcloud builds submit --config="${config}" \
-        --substitutions=_SURVEY="${survey}",_TESTID="-${testid}" \
+        --substitutions=_SURVEY="${survey}",_TESTID="${yamltestid}" \
         "${moduledir}" | sed -n 's/^Step #2: Service URL: \(.*\)$/\1/p')
-    
+
     echo "Creating trigger subscription for Cloud Run"
     gcloud pubsub subscriptions create "${subscrip}" \
         --topic "${trigger_topic}" \

@@ -17,13 +17,18 @@ The deployment script in this repo can be used to create and delete some of the 
 ```
 testid="<enter testid name>" (default: test)
 
+survey="enter survey name"
+
 teardown="<enter False>" (default: False)
 
 trigger_topic="<enter trigger topic name>" (default: elasticc-alerts)
 
 trigger_topic_project="<enter trigger topic project name>" (default: avid-heading-329016)
+```
+* Once the variables have been initialized, enter the following command:
 
-GOOGLE_CLOUD_PROJECT="<enter GCP project name>"
+```
+./setup.sh "$testid" "$survey" "$teardown" "trigger_topic" "trigger_topic_project"
 ```
 * NOTE: If a Cloud Run instance already exists, selecting `teardown="True"` will delete all GCP resources associated with the information provided above.
 
@@ -43,6 +48,6 @@ GOOGLE_CLOUD_PROJECT="<enter GCP project name>"
 * To view which subscription is triggering your Cloud Run instance, select your instance from the [Google Cloud Console](https://console.cloud.google.com/run?) and locate the _Triggers_ tab (it is located under the _URL_ section).
 
 ## How to delete a Cloud Run instance & all associated GCP resources
-* The procedure follows the first two steps of this tutorial. Begin a new terminal and initialize the same variables. This time, select `teardown="<True>"`
+* The procedure follows the first two steps of this tutorial. Begin a new terminal and initialize the same variables. This time, select `teardown="True"`
 
 * Confirm that your current directory is the same as the repo's root directory, and use the command `source setup.sh` to delete all the GCP resources associated with the information you provided (e.g., `testid`, `survey`, `trigger_topic`, etc.).
