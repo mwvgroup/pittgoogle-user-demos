@@ -55,6 +55,7 @@ runinvoker_svcact="cloud-run-invoker@${PROJECT_ID}.iam.gserviceaccount.com"
 
 # create BigQuery, Pub/Sub resources
 if [ "${teardown}" != "True" ]; then
+    echo
     echo "Configuring BigQuery, Pub/Sub resources for Cloud Run..."
     # create pub/sub topics and subscriptions
     gcloud pubsub topics create "${pubsub_SuperNNova_topic}"
@@ -71,7 +72,7 @@ if [ "${teardown}" != "True" ]; then
         --substitutions=_SURVEY="${survey}",_TESTID="${yamltestid}" \
         "${moduledir}" | sed -n 's/^Step #2: Service URL: \(.*\)$/\1/p')
 
-    echo "Creating trigger subscription for Cloud Run"
+    echo "Creating trigger subscription for Cloud Run..."
     gcloud pubsub subscriptions create "${subscrip}" \
         --topic "${trigger_topic}" \
         --topic-project "${trigger_topic_project}" \
