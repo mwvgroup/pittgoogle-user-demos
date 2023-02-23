@@ -31,7 +31,7 @@ SURVEY = os.getenv("SURVEY")
 
 # connect to the logger
 logging_client = logging.Client()
-log_name = "classify-snn-cloudfnc"  # same log for all broker instances
+log_name = "classify-snn-cloudrun"  # same log for all broker instances
 logger = logging_client.logger(log_name)
 
 # GCP resources used in this module
@@ -44,9 +44,13 @@ bq_table = f"{bq_dataset}.SuperNNova"
 
 schema_out = fastavro.schema.load_schema("elasticc.v0_9.brokerClassfication.avsc")
 workingdir = Path(__file__).resolve().parent
-schema_map = load_schema_map(SURVEY, TESTID, schema=(workingdir / "elasticc-schema-map.yml"))
+schema_map = load_schema_map(SURVEY, TESTID, schema=(workingdir / f"{SURVEY}-schema-map.yml"))
 alert_ids = AlertIds(schema_map)
 id_keys = alert_ids.id_keys
+if SURVEY == "elasticc":
+    schema_in = "elasticc.v0_9.alert.avsc"
+else:
+    schema_in = None
 
 model_dir_name = "ZTF_DMAM_V19_NoC_SNIa_vs_CC_forFink"
 model_file_name = "vanilla_S_0_CLF_2_R_none_photometry_DF_1.0_N_global_lstm_32x2_0.05_128_True_mean.pt"
@@ -75,7 +79,7 @@ def index():
     # unpack the alert
     msg = envelope["message"]
 
-    alert_dict = open_alert(msg["data"], load_schema="elasticc.v0_9.alert.avsc")
+    alert_dict = open_alert(msg["data"], load_schema=schema_in)
     a_ids = alert_ids.extract_ids(alert_dict=alert_dict)
     
     try:

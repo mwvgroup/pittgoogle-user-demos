@@ -13,7 +13,7 @@ The deployment script in this repo can be used to create and delete some of the 
 * A BigQuery dataset & table:
     * Used to store SuperNNova classifications
 
-## Tutorial: How to use the deployment script
+## How to use the deployment script
 * Begin a new terminal and confirm that your current directory is the same as the repo's root directory (i.e., pittgoogle-user).
 * Initialize the following variables:
 

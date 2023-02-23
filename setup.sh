@@ -36,14 +36,12 @@ bq_dataset="${PROJECT_ID}:${survey}_alerts"
 pubsub_SuperNNova_topic="${survey}-SuperNNova"
 module_name="${survey}-classifier"
 subscrip="${trigger_topic}" #pub/sub subscription used to trigger Cloud Run module
-yamltestid=""
 
 if [ "$testid" != "False" ]; then
     bq_dataset="${bq_dataset}_${testid}"
     pubsub_SuperNNova_topic="${pubsub_SuperNNova_topic}-${testid}"
     module_name="${module_name}-${testid}"
     subscrip="${subscrip}-${testid}"
-    yamltestid="-${testid}"
 fi
 
 # additional GCP resources & variables used in this script
@@ -57,6 +55,7 @@ runinvoker_svcact="cloud-run-invoker@${PROJECT_ID}.iam.gserviceaccount.com"
 if [ "${teardown}" != "True" ]; then
     echo
     echo "Configuring BigQuery, Pub/Sub resources for Cloud Run..."
+    
     # create pub/sub topics and subscriptions
     gcloud pubsub topics create "${pubsub_SuperNNova_topic}"
 
@@ -69,7 +68,7 @@ if [ "${teardown}" != "True" ]; then
     moduledir="classifier"  # assumes we're in the repo's root dir
     config="${moduledir}/cloudbuild.yaml"
     url=$(gcloud builds submit --config="${config}" \
-        --substitutions=_SURVEY="${survey}",_TESTID="${yamltestid}" \
+        --substitutions="_SURVEY=${survey},_TESTID=${testid},_MODULE_NAME=${module_name}" \
         "${moduledir}" | sed -n 's/^Step #2: Service URL: \(.*\)$/\1/p')
 
     echo "Creating trigger subscription for Cloud Run..."
