@@ -147,27 +147,10 @@ def _format_for_snn(alert_dict: dict) -> pd.DataFrame:
     snn_df = pd.DataFrame(data={"SNID": alert_df.objectId}, index=alert_df.index)
     snn_df.objectId = alert_df.objectId
     snn_df.sourceId = alert_df.sourceId
-
-    if SURVEY == "ztf":
-        snn_df["FLT"] = alert_df["fid"].map(schema_map["FILTER_MAP"])
-        snn_df["MJD"] = math.jd_to_mjd(alert_df["jd"])
-        snn_df["FLUXCAL"], snn_df["FLUXCALERR"] = math.mag_to_flux(
-            alert_df[schema_map["mag"]],
-            alert_df[schema_map["magzp"]],
-            alert_df[schema_map["magerr"]],
-        )
-
-    elif SURVEY == "decat":
-        snn_df["FLT"] = alert_df["fid"].map(schema_map["FILTER_MAP"])
-        col_map = {"mjd": "MJD", "flux": "FLUXCAL", "fluxerr": "FLUXCALERR"}
-        for acol, scol in col_map.items():
-            snn_df[scol] = alert_df[acol]
-
-    elif SURVEY == "elasticc":
-        snn_df["FLT"] = alert_df["filterName"]
-        snn_df["FLUXCAL"] = alert_df["psFlux"]
-        snn_df["FLUXCALERR"] = alert_df["psFluxErr"]
-        snn_df["MJD"] = alert_df["midPointTai"]
+    snn_df["FLT"] = alert_df["filterName"]
+    snn_df["FLUXCAL"] = alert_df["psFlux"]
+    snn_df["FLUXCALERR"] = alert_df["psFluxErr"]
+    snn_df["MJD"] = alert_df["midPointTai"]
 
     return snn_df
 
