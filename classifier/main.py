@@ -4,7 +4,7 @@
 """Classify alerts using SuperNNova (M¨oller & de Boissi`ere 2019)."""
 
 import base64
-from datetime import datetime
+from datetime import datetime, timezone
 import io
 import os
 
@@ -22,8 +22,7 @@ from broker_utils.types import AlertIds
 from broker_utils.schema_maps import load_schema_map, get_value
 from broker_utils.data_utils import open_alert
 
-from flask import Flask, request    
-
+from flask import Flask, request
 
 PROJECT_ID = os.getenv("GCP_PROJECT")
 TESTID = os.getenv("TESTID")
