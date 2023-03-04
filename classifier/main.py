@@ -22,7 +22,7 @@ from broker_utils.types import AlertIds
 from broker_utils.schema_maps import load_schema_map, get_value
 from broker_utils.data_utils import open_alert
 
-from flask import Flask, request
+from flask import Flask, request    
 
 
 PROJECT_ID = os.getenv("GCP_PROJECT")
@@ -31,7 +31,7 @@ SURVEY = os.getenv("SURVEY")
 
 # connect to the logger
 logging_client = logging.Client()
-log_name = "classify-snn-cloudfnc"  # same log for all broker instances
+log_name = "classify-snn-cloudrun"  # same log for all broker instances
 logger = logging_client.logger(log_name)
 
 # GCP resources used in this module
@@ -44,9 +44,13 @@ bq_table = f"{bq_dataset}.SuperNNova"
 
 schema_out = fastavro.schema.load_schema("elasticc.v0_9.brokerClassfication.avsc")
 workingdir = Path(__file__).resolve().parent
-schema_map = load_schema_map(SURVEY, TESTID, schema=(workingdir / "elasticc-schema-map.yml"))
+schema_map = load_schema_map(SURVEY, TESTID, schema=(workingdir / f"{SURVEY}-schema-map.yml"))
 alert_ids = AlertIds(schema_map)
 id_keys = alert_ids.id_keys
+if SURVEY == "elasticc":
+    schema_in = "elasticc.v0_9.alert.avsc"
+else:
+    schema_in = None
 
 model_dir_name = "ZTF_DMAM_V19_NoC_SNIa_vs_CC_forFink"
 model_file_name = "vanilla_S_0_CLF_2_R_none_photometry_DF_1.0_N_global_lstm_32x2_0.05_128_True_mean.pt"
@@ -54,39 +58,41 @@ model_path = Path(__file__).resolve().parent / f"{model_dir_name}/{model_file_na
 
 app = Flask(__name__)
 @app.route("/", methods=["POST"])
-def run(msg: dict, context) -> None:
+def index():
     """Classify alert with SuperNNova; publish and store results.
 
-    For args descriptions, see:
-    https://cloud.google.com/functions/docs/writing/background#function_parameters
-
-    This function is intended to be triggered by Pub/Sub messages, via Cloud Functions.
-
-    Args:
-        msg: Pub/Sub message data and attributes.
-            `data` field contains the message data in a base64-encoded string.
-            `attributes` field contains the message's custom attributes in a dict.
-
-        context: The Cloud Function's event metadata.
-            It has the following attributes:
-                `event_id`: the Pub/Sub message ID.
-                `timestamp`: the Pub/Sub message publish time.
-                `event_type`: for example: "google.pubsub.topic.publish".
-                `resource`: the resource that emitted the event.
-            This argument is not currently used in this function, but the argument is
-            required by Cloud Functions, which will call it.
+    This function is intended to be triggered by Pub/Sub messages, via Cloud Run.
     """
-    
-    #alert_dict = open_alert(msg["data"], load_schema="elasticc.v0_9.alert.avsc")
+    envelope = request.get_json()
 
+    # do some checks
+    if not envelope:
+        msg = "no Pub/Sub message received"
+        print(f"error: {msg}")
+        return f"Bad Request: {msg}", 400
+
+    if not isinstance(envelope, dict) or "message" not in envelope:
+        msg = "invalid Pub/Sub message format"
+        print(f"error: {msg}")
+        return f"Bad Request: {msg}", 400
+
+    # unpack the alert
+    msg = envelope["message"]
+
+    alert_dict = open_alert(msg["data"], load_schema=schema_in)
     a_ids = alert_ids.extract_ids(alert_dict=alert_dict)
     
-    # attrs = {
-    #     **msg["attributes"],
-    #     "brokerIngestTimestamp": datetime.strptime(msg["publish_time"], '%Y-%m-%dT%H:%M:%S.%fZ'),
-    #     id_keys.objectId: str(a_ids.objectId),
-    #     id_keys.sourceId: str(a_ids.sourceId),
-    # }
+    try:
+        publish_time = datetime.strptime(msg["publish_time"].replace("Z","+00:00"), '%Y-%m-%dT%H:%M:%S.%f%z')
+    except ValueError:
+        publish_time = datetime.strptime(msg["publish_time"].replace("Z","+00:00"), '%Y-%m-%dT%H:%M:%S%z')
+
+    attrs = {
+        **msg["attributes"],
+        "brokerIngestTimestamp": publish_time,
+        id_keys.objectId: str(a_ids.objectId),
+        id_keys.sourceId: str(a_ids.sourceId),
+    }
 
     # classify
     #try:
@@ -95,7 +101,7 @@ def run(msg: dict, context) -> None:
     # if something goes wrong, let's just log it and exit gracefully
     # once we know more about what might go wrong, we can make this more specific
     #except Exception as e:
-    logger.log_text(f"Classify error: {e}", severity="WARNING")
+    #logger.log_text(f"Classify error: {e}", severity="WARNING")
 
     #else:
         # store in bigquery
@@ -141,27 +147,10 @@ def _format_for_snn(alert_dict: dict) -> pd.DataFrame:
     snn_df = pd.DataFrame(data={"SNID": alert_df.objectId}, index=alert_df.index)
     snn_df.objectId = alert_df.objectId
     snn_df.sourceId = alert_df.sourceId
-
-    if SURVEY == "ztf":
-        snn_df["FLT"] = alert_df["fid"].map(schema_map["FILTER_MAP"])
-        snn_df["MJD"] = math.jd_to_mjd(alert_df["jd"])
-        snn_df["FLUXCAL"], snn_df["FLUXCALERR"] = math.mag_to_flux(
-            alert_df[schema_map["mag"]],
-            alert_df[schema_map["magzp"]],
-            alert_df[schema_map["magerr"]],
-        )
-
-    elif SURVEY == "decat":
-        snn_df["FLT"] = alert_df["fid"].map(schema_map["FILTER_MAP"])
-        col_map = {"mjd": "MJD", "flux": "FLUXCAL", "fluxerr": "FLUXCALERR"}
-        for acol, scol in col_map.items():
-            snn_df[scol] = alert_df[acol]
-
-    elif SURVEY == "elasticc":
-        snn_df["FLT"] = alert_df["filterName"]
-        snn_df["FLUXCAL"] = alert_df["psFlux"]
-        snn_df["FLUXCALERR"] = alert_df["psFluxErr"]
-        snn_df["MJD"] = alert_df["midPointTai"]
+    snn_df["FLT"] = alert_df["filterName"]
+    snn_df["FLUXCAL"] = alert_df["psFlux"]
+    snn_df["FLUXCALERR"] = alert_df["psFluxErr"]
+    snn_df["MJD"] = alert_df["midPointTai"]
 
     return snn_df
 
