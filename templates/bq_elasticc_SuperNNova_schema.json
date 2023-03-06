@@ -28,5 +28,11 @@
       "mode": "NULLABLE",
       "name": "predicted_class",
       "type": "INTEGER"
+    },
+    {
+      "description": "timestamp of alert processing",
+      "mode": "REQUIRED",
+      "name": "timestamp",
+      "type": "TIMESTAMP"
     }
   ]
