@@ -132,6 +132,7 @@ def _classify_with_snn(alert_dict: dict) -> dict:
         "prob_class0": pred_probs[0].item(),
         "prob_class1": pred_probs[1].item(),
         "predicted_class": np.argmax(pred_probs).item(),
+        "timestamp": datetime.now(timezone.utc)
     }
 
     return snn_dict
