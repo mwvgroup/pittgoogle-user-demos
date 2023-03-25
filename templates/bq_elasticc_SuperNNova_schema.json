@@ -30,7 +30,7 @@
       "type": "INTEGER"
     },
     {
-      "description": "timestamp of alert processing",
+      "description": "timestamp; moment alert is ingested into project",
       "mode": "REQUIRED",
       "name": "timestamp",
       "type": "TIMESTAMP"
