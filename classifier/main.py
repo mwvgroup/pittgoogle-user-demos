@@ -94,16 +94,7 @@ def index():
     }
 
     # classify
-    #try:
     snn_dict = _classify_with_snn(alert_dict)
-
-    # if something goes wrong, let's just log it and exit gracefully
-    # once we know more about what might go wrong, we can make this more specific
-    #except Exception as e:
-    #logger.log_text(f"Classify error: {e}", severity="WARNING")
-
-    #else:
-        # store in bigquery
     errors = gcp_utils.insert_rows_bigquery(bq_table, [snn_dict])
     if len(errors) > 0:
         logger.log_text(f"BigQuery insert error: {errors}", severity="WARNING")
@@ -171,8 +162,6 @@ def _create_elasticc_msg(alert_dict, attrs):
     classifications = [
         {
             "classifierName": "SuperNNova_v1.3",  # Troy: pin version in classify_snn
-            # Chris: fill these two in. classIds are listed here:
-            #        https://docs.google.com/presentation/d/1FwOdELG-XgdNtySeIjF62bDRVU5EsCToi2Svo_kXA50/edit#slide=id.ge52201f94a_0_12
             "classifierParams": "",  # leave this blank for now
             "classId": 111,
             "probability": supernnova_results["prob_class0"],
