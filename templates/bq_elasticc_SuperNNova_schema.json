@@ -30,7 +30,7 @@
       "type": "INTEGER"
     },
     {
-      "description": "timestamp; moment alert is ingested into project",
+      "description": "timestamp for testing",
       "mode": "REQUIRED",
       "name": "timestamp",
       "type": "TIMESTAMP"
