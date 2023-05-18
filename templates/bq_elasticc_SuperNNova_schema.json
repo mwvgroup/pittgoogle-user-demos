@@ -28,5 +28,11 @@
       "mode": "NULLABLE",
       "name": "predicted_class",
       "type": "INTEGER"
+    },
+    {
+      "description": "timestamp for testing",
+      "mode": "NULLABLE",
+      "name": "timestamp",
+      "type": "TIMESTAMP"
     }
   ]
