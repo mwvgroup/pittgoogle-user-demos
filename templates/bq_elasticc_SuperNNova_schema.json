@@ -31,7 +31,7 @@
     },
     {
       "description": "timestamp for testing",
-      "mode": "REQUIRED",
+      "mode": "NULLABLE",
       "name": "timestamp",
       "type": "TIMESTAMP"
     }
