@@ -47,7 +47,7 @@ schema_map = load_schema_map(SURVEY, TESTID, schema=(workingdir / f"{SURVEY}-sch
 alert_ids = AlertIds(schema_map)
 id_keys = alert_ids.id_keys
 if SURVEY == "elasticc":
-    schema_in = "elasticc.v0_9.alert.avsc"
+    schema_in = "elasticc.v0_9_1.alert.avsc"
 else:
     schema_in = None
 
