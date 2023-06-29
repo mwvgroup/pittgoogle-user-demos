@@ -161,9 +161,7 @@ def _create_elasticc_msg(alert_dict, attrs):
 
     classifications = [
         {
-            "classifierName": "SuperNNova_v1.3",  # Troy: pin version in classify_snn
-            "classifierParams": "",  # leave this blank for now
-            "classId": 111,
+            "classId": 2222,
             "probability": supernnova_results["prob_class0"],
         },
     ]
@@ -175,6 +173,8 @@ def _create_elasticc_msg(alert_dict, attrs):
         "brokerIngestTimestamp": brokerIngestTimestamp,
         "brokerName": "Pitt-Google Broker",
         "brokerVersion": brokerVersion,
+        "classifierName": "SuperNNova_v1.3",  # Troy: pin version in classify_snn
+        "classifierParams": "",  # leave this blank for now
         "classifications": classifications
     }
 
