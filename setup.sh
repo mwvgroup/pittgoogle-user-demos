@@ -72,10 +72,12 @@ if [ "${teardown}" != "True" ]; then
         "${moduledir}" | sed -n 's/^Step #2: Service URL: \(.*\)$/\1/p')
 
     echo "Creating trigger subscription for Cloud Run..."
+    # no dead letter topic set; if message fails to process successfully, will continue to try forever
     gcloud pubsub subscriptions create "${subscrip}" \
         --topic "${trigger_topic}" \
         --topic-project "${trigger_topic_project}" \
         --ack-deadline=600 \
+        --max-delivery-attempts \
         --push-endpoint="${url}${route}" \
         --push-auth-service-account="${runinvoker_svcact}"
 
