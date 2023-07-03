@@ -173,7 +173,7 @@ def _create_elasticc_msg(alert_dict, attrs):
         "brokerIngestTimestamp": brokerIngestTimestamp,
         "brokerName": "Pitt-Google Broker",
         "brokerVersion": brokerVersion,
-        "classifierName": "SuperNNova_v1.3",  # Troy: pin version in classify_snn
+        "classifierName": "SuperNNova_v1.3",
         "classifierParams": "",  # leave this blank for now
         "classifications": classifications
     }
