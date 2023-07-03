@@ -78,7 +78,6 @@ if [ "${teardown}" != "True" ]; then
         --topic "${trigger_topic}" \
         --topic-project "${trigger_topic_project}" \
         --ack-deadline=600 \
-        --max-delivery-attempts \
         --push-endpoint="${url}${route}" \
         --push-auth-service-account="${runinvoker_svcact}"
 
