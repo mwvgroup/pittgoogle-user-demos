@@ -72,6 +72,8 @@ if [ "${teardown}" != "True" ]; then
         "${moduledir}" | sed -n 's/^Step #2: Service URL: \(.*\)$/\1/p')
 
     echo "Creating trigger subscription for Cloud Run..."
+    # WARNING:  This is set to retry failed deliveries. If there is a bug in main.py this will 
+    # retry indefinitely, until the message is delete manually.
     gcloud pubsub subscriptions create "${subscrip}" \
         --topic "${trigger_topic}" \
         --topic-project "${trigger_topic_project}" \

@@ -41,13 +41,13 @@ if TESTID != "False":  # attach the testid to the names
     ps_topic = f"{ps_topic}-{TESTID}"
 bq_table = f"{bq_dataset}.SuperNNova"
 
-schema_out = fastavro.schema.load_schema("elasticc.v0_9.brokerClassfication.avsc")
+schema_out = fastavro.schema.load_schema("elasticc.v0_9_1.brokerClassfication.avsc")
 workingdir = Path(__file__).resolve().parent
 schema_map = load_schema_map(SURVEY, TESTID, schema=(workingdir / f"{SURVEY}-schema-map.yml"))
 alert_ids = AlertIds(schema_map)
 id_keys = alert_ids.id_keys
 if SURVEY == "elasticc":
-    schema_in = "elasticc.v0_9.alert.avsc"
+    schema_in = "elasticc.v0_9_1.alert.avsc"
 else:
     schema_in = None
 
@@ -161,9 +161,7 @@ def _create_elasticc_msg(alert_dict, attrs):
 
     classifications = [
         {
-            "classifierName": "SuperNNova_v1.3",  # Troy: pin version in classify_snn
-            "classifierParams": "",  # leave this blank for now
-            "classId": 111,
+            "classId": 2222,
             "probability": supernnova_results["prob_class0"],
         },
     ]
@@ -175,6 +173,8 @@ def _create_elasticc_msg(alert_dict, attrs):
         "brokerIngestTimestamp": brokerIngestTimestamp,
         "brokerName": "Pitt-Google Broker",
         "brokerVersion": brokerVersion,
+        "classifierName": "SuperNNova_v1.3",
+        "classifierParams": "",  # leave this blank for now
         "classifications": classifications
     }
 
