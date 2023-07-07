@@ -3,20 +3,18 @@
 
 """Classify alerts using MicroLIA (Goodines et al. 2020, https://arxiv.org/abs/2004.14347)."""
 
-import base64
 from datetime import datetime, timezone
 import io
 import os
 
 from google.cloud import logging
-import json
 import fastavro
 
 import numpy as np
 import pandas as pd
 from pathlib import Path
 
-from broker_utils import data_utils, gcp_utils, math
+from broker_utils import data_utils, gcp_utils
 from broker_utils.types import AlertIds
 from broker_utils.schema_maps import load_schema_map, get_value
 from broker_utils.data_utils import open_alert
