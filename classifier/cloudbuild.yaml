@@ -13,7 +13,7 @@ steps:
 substitutions:
     _SURVEY: 'elasticc'
     _TESTID: 'testid'
-    _MODULE_NAME: '${_SURVEY}-classifier-${_TESTID}'
+    _MODULE_NAME: '${_SURVEY}-SuperNNova-${_TESTID}'
     _MODULE_IMAGE_NAME: 'gcr.io/${PROJECT_ID}/${_MODULE_NAME}'
     _ENV_VARS: 'GCP_PROJECT=${PROJECT_ID},SURVEY=${_SURVEY},TESTID=${_TESTID}'
     _REGION: 'us-central1'

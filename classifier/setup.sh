@@ -34,7 +34,7 @@ fi
 # GCP resources & variables used in this script that need a testid
 bq_dataset="${PROJECT_ID}:${survey}_alerts"
 pubsub_SuperNNova_topic="${survey}-SuperNNova"
-module_name="${survey}-classifier"
+module_name="${survey}-SuperNNova"
 subscrip="${trigger_topic}" #pub/sub subscription used to trigger Cloud Run module
 
 if [ "$testid" != "False" ]; then
