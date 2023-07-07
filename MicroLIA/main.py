@@ -42,7 +42,9 @@ bq_table = f"{bq_dataset}.MicroLIA"
 
 schema_out = fastavro.schema.load_schema("elasticc.v0_9_1.brokerClassfication.avsc")
 workingdir = Path(__file__).resolve().parent
-schema_map = load_schema_map(SURVEY, TESTID, schema=(workingdir / f"{SURVEY}-schema-map.yml"))
+schema_map = load_schema_map(
+    SURVEY, TESTID, schema=(workingdir / f"{SURVEY}-schema-map.yml")
+)
 alert_ids = AlertIds(schema_map)
 id_keys = alert_ids.id_keys
 if SURVEY == "elasticc":
@@ -55,6 +57,8 @@ model_file_name = "MicroLIA_ensemble_model"
 model_path = Path(__file__).resolve().parent / f"{model_dir_name}/{model_file_name}"
 
 app = Flask(__name__)
+
+
 @app.route("/", methods=["POST"])
 def index():
     """Classify alert; publish and store results.
@@ -79,11 +83,15 @@ def index():
 
     alert_dict = open_alert(msg["data"], load_schema=schema_in)
     a_ids = alert_ids.extract_ids(alert_dict=alert_dict)
-    
+
     try:
-        publish_time = datetime.strptime(msg["publish_time"].replace("Z","+00:00"), '%Y-%m-%dT%H:%M:%S.%f%z')
+        publish_time = datetime.strptime(
+            msg["publish_time"].replace("Z", "+00:00"), "%Y-%m-%dT%H:%M:%S.%f%z"
+        )
     except ValueError:
-        publish_time = datetime.strptime(msg["publish_time"].replace("Z","+00:00"), '%Y-%m-%dT%H:%M:%S%z')
+        publish_time = datetime.strptime(
+            msg["publish_time"].replace("Z", "+00:00"), "%Y-%m-%dT%H:%M:%S%z"
+        )
 
     attrs = {
         **msg["attributes"],
@@ -103,6 +111,7 @@ def index():
     gcp_utils.publish_pubsub(ps_topic, avro, attrs=attrs)
 
     return ("", 204)
+
 
 def _classify_with_snn(alert_dict: dict) -> dict:
     """Classify the alert using MicroLIA."""
@@ -124,7 +133,7 @@ def _classify_with_snn(alert_dict: dict) -> dict:
         "prob_class2": pred_probs[2].item(),
         "prob_class3": pred_probs[3].item(),
         "predicted_class": np.argmax(pred_probs).item(),
-        "timestamp": datetime.now(timezone.utc)
+        "timestamp": datetime.now(timezone.utc),
     }
 
     return snn_dict
@@ -184,12 +193,13 @@ def _create_elasticc_msg(alert_dict, attrs):
         "brokerVersion": brokerVersion,
         "classifierName": "MicroLIA_v2.6",
         "classifierParams": "",  # leave this blank for now
-        "classifications": classifications
+        "classifications": classifications,
     }
 
     # avro serialize the dictionary
     avro = _dict_to_avro(msg, schema_out)
     return avro
+
 
 def _dict_to_avro(msg: dict, schema: dict):
     """Avro serialize a dictionary."""
