@@ -61,11 +61,11 @@ if [ "${teardown}" != "True" ]; then
 
     # create the BigQuery dataset and table
     bq mk --dataset "${bq_dataset}"
-    bq mk --table "${bq_dataset}.${alerts_table}" "templates/bq_${survey}_${alerts_table}_schema.json"
+    bq mk --table "${bq_dataset}.${alerts_table}" "bq_${survey}_${alerts_table}_schema.json"
 
     # Deploy Cloud Run
     echo "Creating container image and deploying to Cloud Run..."
-    moduledir="classifier"  # assumes we're in the repo's root dir
+    moduledir="./"  # assumes deploying what's in our current directory
     config="${moduledir}/cloudbuild.yaml"
     url=$(gcloud builds submit --config="${config}" \
         --substitutions="_SURVEY=${survey},_TESTID=${testid},_MODULE_NAME=${module_name}" \
