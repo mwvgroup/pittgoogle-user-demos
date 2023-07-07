@@ -5,5 +5,4 @@ This Cloud Run instance classifies alerts using
 
 The code follows MicroLIA's OGLE IV example(https://microlia.readthedocs.io/en/latest/source/Examples.html#example-ogle-iv).
 
-The trained model (and related configs/info) is packaged with the Cloud Function.
-The directory name represents the training dataset
+The trained model is packaged here in 'trained_model' for use with the Cloud Function.
