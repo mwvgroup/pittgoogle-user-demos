@@ -21,7 +21,7 @@ from broker_utils.data_utils import open_alert
 
 from flask import Flask, request
 
-from MicroLIA import classify_lc
+from MicroLIA import classify_lcs
 
 PROJECT_ID = os.getenv("GCP_PROJECT")
 TESTID = os.getenv("TESTID")
@@ -101,7 +101,7 @@ def index():
     }
 
     # classify
-    snn_dict = _classify_with_snn(alert_dict)
+    snn_dict = _classify(alert_dict)
     errors = gcp_utils.insert_rows_bigquery(bq_table, [snn_dict])
     if len(errors) > 0:
         logger.log_text(f"BigQuery insert error: {errors}", severity="WARNING")
@@ -113,21 +113,21 @@ def index():
     return ("", 204)
 
 
-def _classify_with_snn(alert_dict: dict) -> dict:
+def _classify(alert_dict: dict) -> dict:
     """Classify the alert using MicroLIA."""
     # init
-    snn_df = _format_for_snn(alert_dict)
+    df = _format_for_classifier(alert_dict)
     device = "cpu"
 
     # classify
-    _, pred_probs = classify_lcs(snn_df, model_path, device)
+    _, pred_probs = classify_lcs(df, model_path, device)
 
     # extract results to dict and attach object/source ids.
     # use `.item()` to convert numpy -> python types for later json serialization
     pred_probs = pred_probs.flatten()
     snn_dict = {
-        id_keys.objectId: snn_df.objectId,
-        id_keys.sourceId: snn_df.sourceId,
+        id_keys.objectId: df.objectId,
+        id_keys.sourceId: df.sourceId,
         "prob_class0": pred_probs[0].item(),
         "prob_class1": pred_probs[1].item(),
         "prob_class2": pred_probs[2].item(),
@@ -139,13 +139,13 @@ def _classify_with_snn(alert_dict: dict) -> dict:
     return snn_dict
 
 
-def _format_for_snn(alert_dict: dict) -> pd.DataFrame:
+def _format_for_classifier(alert_dict: dict) -> pd.DataFrame:
     """Compute features and cast to a DataFrame for input to MicroLIA."""
     # cast alert to dataframe
     alert_df = data_utils.alert_dict_to_dataframe(alert_dict, schema_map)
 
     # start a dataframe for input to SNN
-    snn_df = pd.DataFrame(data={"SNID": alert_df.objectId}, index=alert_df.index)
+    snn_df = pd.DataFrame(data={"ID": alert_df.objectId}, index=alert_df.index)
     snn_df.objectId = alert_df.objectId
     snn_df.sourceId = alert_df.sourceId
     snn_df["FLT"] = alert_df["filterName"]
@@ -171,16 +171,18 @@ def _create_elasticc_msg(alert_dict, attrs):
 
     # Write down the mappings between our classifications
     # and the ELASTTIC taxonomy
+    # I'm not really sure where CVs should be (prob_class0).
+    # I'll put them under Periodic/Other (2321).
     classifications = [
         {
-            "classId": 2321,  # I'm not really sure where CVs should be.  I'll put then Periodic/Other.
-            "probability": supernnova_results["prob_class0"],
+            "classId": 2321,
+            "probability": results["prob_class0"],
             "classId": 2326,
-            "probability": supernnova_results["prob_class1"],
+            "probability": results["prob_class1"],
             "classId": 2235,
-            "probability": supernnova_results["prob_class2"],
+            "probability": results["prob_class2"],
             "classId": 2323,
-            "probability": supernnova_results["prob_class3"],
+            "probability": results["prob_class3"],
         },
     ]
 
