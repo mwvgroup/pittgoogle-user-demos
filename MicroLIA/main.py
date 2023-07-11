@@ -113,30 +113,37 @@ def index():
     return ("", 204)
 
 
-def _classify(alert_dict: dict) -> dict:
+def _classify(model, alert_dict: dict) -> dict:
     """Classify the alert using MicroLIA."""
     # init
     df = _format_for_classifier(alert_dict)
     device = "cpu"
 
     # classify
-    _, pred_probs = classify_lcs(df, model_path, device)
+    prediction = model.predict(df["MJD"], df["flux"], df["fluxErr"], convert=False)
+
+    # prediction is going to be a 2D numpy array of [[pred_class, pred_prob], ...]
+    # with both pred_class and pred_prob stored as floats
+    # Get the highest probability and look up the pred_class
+    most_likely_index = np.argmax(prediction[:, 1])
+    most_likely = prediction[most_likely_index, 0]
+    # Map to a dict from the 2D array to make later look ups easier
+    classifications = {int(pc): pp for (pc, pp) in prediction}
 
     # extract results to dict and attach object/source ids.
     # use `.item()` to convert numpy -> python types for later json serialization
-    pred_probs = pred_probs.flatten()
-    snn_dict = {
+    classification_dict = {
         id_keys.objectId: df.objectId,
         id_keys.sourceId: df.sourceId,
-        "prob_class0": pred_probs[0].item(),
-        "prob_class1": pred_probs[1].item(),
-        "prob_class2": pred_probs[2].item(),
-        "prob_class3": pred_probs[3].item(),
-        "predicted_class": np.argmax(pred_probs).item(),
+        "prob_class0": classifications[0].item(),
+        "prob_class1": classifications[1].item(),
+        "prob_class2": classifications[2].item(),
+        "prob_class3": classifications[3].item(),
+        "predicted_class": np.argmax(classifications).item(),
         "timestamp": datetime.now(timezone.utc),
     }
 
-    return snn_dict
+    return classification_dict
 
 
 def _format_for_classifier(alert_dict: dict) -> pd.DataFrame:
@@ -148,9 +155,9 @@ def _format_for_classifier(alert_dict: dict) -> pd.DataFrame:
     snn_df = pd.DataFrame(data={"ID": alert_df.objectId}, index=alert_df.index)
     snn_df.objectId = alert_df.objectId
     snn_df.sourceId = alert_df.sourceId
-    snn_df["FLT"] = alert_df["filterName"]
-    snn_df["FLUXCAL"] = alert_df["psFlux"]
-    snn_df["FLUXCALERR"] = alert_df["psFluxErr"]
+    snn_df["band"] = alert_df["filterName"]
+    snn_df["flux"] = alert_df["psFlux"]
+    snn_df["fluxErr"] = alert_df["psFluxErr"]
     snn_df["MJD"] = alert_df["midPointTai"]
 
     return snn_df
