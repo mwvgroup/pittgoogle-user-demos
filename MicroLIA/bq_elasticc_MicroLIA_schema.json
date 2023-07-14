@@ -1,9 +1,15 @@
 [
     {
+      "description": "unique alert identifier",
+      "mode": "REQUIRED",
+      "name": "alertId",
+      "type": "INTEGER"
+    },
+    {
       "description": "object identifier or name",
       "mode": "REQUIRED",
       "name": "diaObjectId",
-      "type": "STRING"
+      "type": "INTEGER"
     },
     {
       "description": "Candidate ID from operations DB",
