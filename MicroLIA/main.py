@@ -40,7 +40,8 @@ if TESTID != "False":  # attach the testid to the names
     ps_topic = f"{ps_topic}-{TESTID}"
 bq_table = f"{bq_dataset}.MicroLIA"
 
-schema_out = fastavro.schema.load_schema("elasticc.v0_9_1.brokerClassfication.avsc")
+schema_file = "elasticc.v0_9_1.brokerClassfication.avsc"
+schema_out = fastavro.schema.load_schema(schema_file)
 workingdir = Path(__file__).resolve().parent
 schema_map = load_schema_map(
     SURVEY, TESTID, schema=(workingdir / f"{SURVEY}-schema-map.yml")
@@ -101,13 +102,13 @@ def index():
     }
 
     # classify
-    snn_dict = _classify(alert_dict)
-    errors = gcp_utils.insert_rows_bigquery(bq_table, [snn_dict])
+    classifications = _classify(alert_dict)
+    errors = gcp_utils.insert_rows_bigquery(bq_table, [classifications])
     if len(errors) > 0:
         logger.log_text(f"BigQuery insert error: {errors}", severity="WARNING")
 
     # create the message for elasticc and publish the stream
-    avro = _create_elasticc_msg(dict(alert=alert_dict, MicroLIA=snn_dict), attrs)
+    avro = _create_elasticc_msg(dict(alert=alert_dict, MicroLIA=classifications), attrs)
     gcp_utils.publish_pubsub(ps_topic, avro, attrs=attrs)
 
     return ("", 204)
@@ -180,6 +181,7 @@ def _create_elasticc_msg(alert_dict, attrs):
 
     # Write down the mappings between our classifications
     # and the ELASTTIC taxonomy
+    # https://github.com/LSSTDESC/elasticc/blob/main/taxonomy/taxonomy.ipynb
     # I'm not really sure where CVs should be (prob_class0).
     # I'll put them under Periodic/Other (2321).
     classifications = [
@@ -203,7 +205,7 @@ def _create_elasticc_msg(alert_dict, attrs):
         "brokerName": "Pitt-Google Broker",
         "brokerVersion": brokerVersion,
         "classifierName": "MicroLIA_v2.6",
-        "classifierParams": "",  # leave this blank for now
+        "classifierParams": model_path,  # Record the training file
         "classifications": classifications,
     }
 
