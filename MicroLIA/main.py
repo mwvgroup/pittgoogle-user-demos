@@ -133,6 +133,7 @@ def _classify(model, alert_dict: dict) -> dict:
     # extract results to dict and attach object/source ids.
     # use `.item()` to convert numpy -> python types for later json serialization
     classification_dict = {
+        id_keys.alertId: df.alertId,
         id_keys.objectId: df.objectId,
         id_keys.sourceId: df.sourceId,
         "prob_class0": classifications[0].item(),
@@ -153,6 +154,7 @@ def _format_for_classifier(alert_dict: dict) -> pd.DataFrame:
 
     # start a dataframe for input to SNN
     snn_df = pd.DataFrame(data={"ID": alert_df.objectId}, index=alert_df.index)
+    snn_df.alertId = alert_df.alertId
     snn_df.objectId = alert_df.objectId
     snn_df.sourceId = alert_df.sourceId
     snn_df["band"] = alert_df["filterName"]
