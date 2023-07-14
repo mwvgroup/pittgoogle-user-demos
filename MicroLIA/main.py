@@ -153,17 +153,17 @@ def _format_for_classifier(alert_dict: dict) -> pd.DataFrame:
     # cast alert to dataframe
     alert_df = data_utils.alert_dict_to_dataframe(alert_dict, schema_map)
 
-    # start a dataframe for input to SNN
-    snn_df = pd.DataFrame(data={"ID": alert_df.objectId}, index=alert_df.index)
-    snn_df.alertId = alert_df.alertId
-    snn_df.objectId = alert_df.objectId
-    snn_df.sourceId = alert_df.sourceId
-    snn_df["band"] = alert_df["filterName"]
-    snn_df["flux"] = alert_df["psFlux"]
-    snn_df["fluxErr"] = alert_df["psFluxErr"]
-    snn_df["MJD"] = alert_df["midPointTai"]
+    # start a dataframe for input to the classifier
+    classifier_df = pd.DataFrame(data={"ID": alert_df.objectId}, index=alert_df.index)
+    classifier_df.alertId = alert_df.alertId
+    classifier_df.objectId = alert_df.objectId
+    classifier_df.sourceId = alert_df.sourceId
+    classifier_df["band"] = alert_df["filterName"]
+    classifier_df["flux"] = alert_df["psFlux"]
+    classifier_df["fluxErr"] = alert_df["psFluxErr"]
+    classifier_df["MJD"] = alert_df["midPointTai"]
 
-    return snn_df
+    return classifier_df
 
 
 def _create_elasticc_msg(alert_dict, attrs):
