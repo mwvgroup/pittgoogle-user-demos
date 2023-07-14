@@ -118,7 +118,6 @@ def _classify(model, alert_dict: dict) -> dict:
     """Classify the alert using MicroLIA."""
     # init
     df = _format_for_classifier(alert_dict)
-    device = "cpu"
 
     # classify
     prediction = model.predict(df["MJD"], df["flux"], df["fluxErr"], convert=False)
@@ -141,7 +140,7 @@ def _classify(model, alert_dict: dict) -> dict:
         "prob_class1": classifications[1].item(),
         "prob_class2": classifications[2].item(),
         "prob_class3": classifications[3].item(),
-        "predicted_class": np.argmax(classifications).item(),
+        "predicted_class": most_likely,
         "timestamp": datetime.now(timezone.utc),
     }
 
