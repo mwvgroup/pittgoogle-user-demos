@@ -3,13 +3,11 @@
 
 """Classify alerts using SuperNNova (M¨oller & de Boissi`ere 2019)."""
 
-import base64
 from datetime import datetime, timezone
 import io
 import os
 
 from google.cloud import logging
-import json
 import fastavro
 
 import numpy as np
@@ -17,7 +15,7 @@ import pandas as pd
 from pathlib import Path
 from supernnova.validation.validate_onthefly import classify_lcs
 
-from broker_utils import data_utils, gcp_utils, math
+from broker_utils import data_utils, gcp_utils
 from broker_utils.types import AlertIds
 from broker_utils.schema_maps import load_schema_map, get_value
 from broker_utils.data_utils import open_alert
@@ -80,7 +78,7 @@ def index():
 
     alert_dict = open_alert(msg["data"], load_schema=schema_in)
     a_ids = alert_ids.extract_ids(alert_dict=alert_dict)
-    
+
     try:
         publish_time = datetime.strptime(msg["publish_time"].replace("Z","+00:00"), '%Y-%m-%dT%H:%M:%S.%f%z')
     except ValueError:
