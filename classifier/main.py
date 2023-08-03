@@ -3,24 +3,22 @@
 
 """Classify alerts using SuperNNova (M¨oller & de Boissi`ere 2019)."""
 
-from datetime import datetime, timezone
 import io
 import os
+from datetime import datetime, timezone
+from pathlib import Path
 
-from google.cloud import logging
 import fastavro
-
 import numpy as np
 import pandas as pd
-from pathlib import Path
+from flask import Flask, request
+from google.cloud import logging
 from supernnova.validation.validate_onthefly import classify_lcs
 
 from broker_utils import data_utils, gcp_utils
-from broker_utils.types import AlertIds
-from broker_utils.schema_maps import load_schema_map, get_value
 from broker_utils.data_utils import open_alert
-
-from flask import Flask, request
+from broker_utils.schema_maps import get_value, load_schema_map
+from broker_utils.types import AlertIds
 
 PROJECT_ID = os.getenv("GCP_PROJECT")
 TESTID = os.getenv("TESTID")
