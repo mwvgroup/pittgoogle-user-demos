@@ -48,10 +48,14 @@ else:
     schema_in = None
 
 model_dir_name = "ZTF_DMAM_V19_NoC_SNIa_vs_CC_forFink"
-model_file_name = "vanilla_S_0_CLF_2_R_none_photometry_DF_1.0_N_global_lstm_32x2_0.05_128_True_mean.pt"
+model_file_name = (
+    "vanilla_S_0_CLF_2_R_none_photometry_DF_1.0_N_global_lstm_32x2_0.05_128_True_mean.pt"
+)
 model_path = Path(__file__).resolve().parent / f"{model_dir_name}/{model_file_name}"
 
 app = Flask(__name__)
+
+
 @app.route("/", methods=["POST"])
 def index():
     """Classify alert with SuperNNova; publish and store results.
@@ -78,9 +82,13 @@ def index():
     a_ids = alert_ids.extract_ids(alert_dict=alert_dict)
 
     try:
-        publish_time = datetime.strptime(msg["publish_time"].replace("Z","+00:00"), '%Y-%m-%dT%H:%M:%S.%f%z')
+        publish_time = datetime.strptime(
+            msg["publish_time"].replace("Z", "+00:00"), "%Y-%m-%dT%H:%M:%S.%f%z"
+        )
     except ValueError:
-        publish_time = datetime.strptime(msg["publish_time"].replace("Z","+00:00"), '%Y-%m-%dT%H:%M:%S%z')
+        publish_time = datetime.strptime(
+            msg["publish_time"].replace("Z", "+00:00"), "%Y-%m-%dT%H:%M:%S%z"
+        )
 
     attrs = {
         **msg["attributes"],
@@ -101,6 +109,7 @@ def index():
 
     return ("", 204)
 
+
 def _classify_with_snn(alert_dict: dict) -> dict:
     """Classify the alert using SuperNNova."""
     # init
@@ -119,7 +128,7 @@ def _classify_with_snn(alert_dict: dict) -> dict:
         "prob_class0": pred_probs[0].item(),
         "prob_class1": pred_probs[1].item(),
         "predicted_class": np.argmax(pred_probs).item(),
-        "timestamp": datetime.now(timezone.utc)
+        "timestamp": datetime.now(timezone.utc),
     }
 
     return snn_dict
@@ -171,12 +180,13 @@ def _create_elasticc_msg(alert_dict, attrs):
         "brokerVersion": brokerVersion,
         "classifierName": "SuperNNova_v1.3",
         "classifierParams": "",  # leave this blank for now
-        "classifications": classifications
+        "classifications": classifications,
     }
 
     # avro serialize the dictionary
     avro = _dict_to_avro(msg, schema_out)
     return avro
+
 
 def _dict_to_avro(msg: dict, schema: dict):
     """Avro serialize a dictionary."""
