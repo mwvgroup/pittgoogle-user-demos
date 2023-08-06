@@ -19,6 +19,9 @@ PROJECT_ID = os.getenv("GCP_PROJECT")
 TESTID = os.getenv("TESTID")
 SURVEY = os.getenv("SURVEY")
 
+HTTP204 = 204
+HTTP400 = 400
+
 # connect to the logger
 logging_client = logging.Client()
 log_name = "classify-snn-cloudrun"  # same log for all broker instances
@@ -66,8 +69,8 @@ def index():
     This function is intended to be triggered by Pub/Sub messages, via Cloud Run.
     """
     # envelope = request.get_json()
-    alert = pg.pubsub.Alert.from_cloud_run(envelope=request.get_json(), schema_name=SCHEMA_IN)
-
+    try:
+        alert = pg.pubsub.Alert.from_cloud_run(envelope=request.get_json(), schema_name=SCHEMA_IN)
     # # do some checks
     # if not envelope:
     #     msg = "no Pub/Sub message received"
@@ -77,8 +80,10 @@ def index():
     #     msg = "invalid Pub/Sub message format"
     #     print(f"error: {msg}")
     #     return f"Bad Request: {msg}", 400
-    if alert.bad_request:
-        return alert.bad_request
+    # if alert.bad_request:
+    #     return alert.bad_request
+    except pg.exceptions.BadRequest as err:
+        return err.text, HTTP400
 
     # unpack the alert
     # msg = envelope["message"]
@@ -106,7 +111,7 @@ def index():
     # gcp_utils.publish_pubsub(ps_topic, avro, attrs=attrs)
     TOPIC.publish(alert_out, format=SCHEMA_OUT)
 
-    return ("", 204)
+    return "", HTTP204
 
 
 def classify_with_snn(alert: pg.pubsub.Alert) -> dict:
