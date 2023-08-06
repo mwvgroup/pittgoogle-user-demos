@@ -7,10 +7,10 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
+import google.cloud.logging
 import numpy as np
 import pandas as pd
 from flask import Flask, request
-from google.cloud import logging
 from supernnova.validation.validate_onthefly import classify_lcs
 
 import pittgoogle as pg
@@ -23,7 +23,7 @@ HTTP204 = 204
 HTTP400 = 400
 
 # connect to the logger
-logging_client = logging.Client()
+logging_client = google.cloud.logging.Client()
 log_name = "classify-snn-cloudrun"  # same log for all broker instances
 logger = logging_client.logger(log_name)
 
