@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 import io
 import os
 
-from google.cloud import logging
+from google.cloud import bigquery, logging
 import json
 import fastavro
 
@@ -39,7 +39,7 @@ ps_topic = f"{SURVEY}-SuperNNova"
 if TESTID != "False":  # attach the testid to the names
     bq_dataset = f"{bq_dataset}_{TESTID}"
     ps_topic = f"{ps_topic}-{TESTID}"
-bq_table = f"{bq_dataset}.SuperNNova"
+bq_table_id = f"{PROJECT_ID}.{bq_dataset}.SuperNNova"
 
 schema_out = fastavro.schema.load_schema("elasticc.v0_9_1.brokerClassfication.avsc")
 workingdir = Path(__file__).resolve().parent
@@ -54,6 +54,16 @@ else:
 model_dir_name = "ZTF_DMAM_V19_NoC_SNIa_vs_CC_forFink"
 model_file_name = "vanilla_S_0_CLF_2_R_none_photometry_DF_1.0_N_global_lstm_32x2_0.05_128_True_mean.pt"
 model_path = Path(__file__).resolve().parent / f"{model_dir_name}/{model_file_name}"
+bq_client = bigquery.Client(project=PROJECT_ID)
+bq_schema = [
+    bigquery.SchemaField("diaObjectId", "STRING"),
+    bigquery.SchemaField("diaSourceId", "INTEGER"),
+    bigquery.SchemaField("prob_class0", "FLOAT"),
+    bigquery.SchemaField("prob_class1", "FLOAT"),
+    bigquery.SchemaField("predicted_class", "INTEGER"),
+    bigquery.SchemaField("timestamp", "TIMESTAMP")
+]
+
 
 app = Flask(__name__)
 @app.route("/", methods=["POST"])
@@ -95,13 +105,15 @@ def index():
 
     # classify
     snn_dict = _classify_with_snn(alert_dict)
-    errors = gcp_utils.insert_rows_bigquery(bq_table, [snn_dict])
-    if len(errors) > 0:
-        logger.log_text(f"BigQuery insert error: {errors}", severity="WARNING")
 
     # create the message for elasticc and publish the stream
     avro = _create_elasticc_msg(dict(alert=alert_dict, SuperNNova=snn_dict), attrs)
     gcp_utils.publish_pubsub(ps_topic, avro, attrs=attrs)
+
+    # write to BigQuery
+    errors = bq_client.insert_rows(bq_table_id, [snn_dict], bq_schema)
+    if len(errors) > 0:
+        logger.log_text(f"BigQuery insert error: {errors}", severity="WARNING")
 
     return ("", 204)
 
