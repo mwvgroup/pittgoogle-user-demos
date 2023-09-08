@@ -8,7 +8,8 @@ from datetime import datetime, timezone
 import io
 import os
 
-from google.cloud import logging
+from google.cloud import bigquery, logging
+from google.cloud.bigquery import Table
 import json
 import fastavro
 
@@ -34,15 +35,25 @@ log_name = "classify-snn-cloudrun"  # same log for all broker instances
 logger = logging_client.logger(log_name)
 
 # GCP resources used in this module
+bq_client = bigquery.Client(project=PROJECT_ID)
 bq_dataset = f"{SURVEY}_alerts"
 ps_topic = f"{SURVEY}-SuperNNova"
 if TESTID != "False":  # attach the testid to the names
     bq_dataset = f"{bq_dataset}_{TESTID}"
     ps_topic = f"{ps_topic}-{TESTID}"
 bq_table = f"{bq_dataset}.SuperNNova"
+bq_table_id=f"{PROJECT_ID}.{bq_table}"
 
 schema_out = fastavro.schema.load_schema("elasticc.v0_9_1.brokerClassfication.avsc")
 workingdir = Path(__file__).resolve().parent
+bq_schema = [
+    bigquery.SchemaField("diaObjectId", "STRING"),
+    bigquery.SchemaField("diaSourceId", "INTEGER"),
+    bigquery.SchemaField("prob_class0", "FLOAT"),
+    bigquery.SchemaField("prob_class1", "FLOAT"),
+    bigquery.SchemaField("predicted_class", "INTEGER"),
+    bigquery.SchemaField("timestamp", "TIMESTAMP")
+]
 schema_map = load_schema_map(SURVEY, TESTID, schema=(workingdir / f"{SURVEY}-schema-map.yml"))
 alert_ids = AlertIds(schema_map)
 id_keys = alert_ids.id_keys
@@ -95,7 +106,8 @@ def index():
 
     # classify
     snn_dict = _classify_with_snn(alert_dict)
-    errors = gcp_utils.insert_rows_bigquery(bq_table, [snn_dict])
+    errors = bq_client.insert_rows(bq_table_id, [snn_dict], bq_schema)
+
     if len(errors) > 0:
         logger.log_text(f"BigQuery insert error: {errors}", severity="WARNING")
 
