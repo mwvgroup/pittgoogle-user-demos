@@ -12,12 +12,8 @@ import fastavro
 
 import numpy as np
 import pandas as pd
+import pittgoogle
 from pathlib import Path
-
-from broker_utils import data_utils, gcp_utils
-from broker_utils.types import AlertIds
-from broker_utils.schema_maps import load_schema_map, get_value
-from broker_utils.data_utils import open_alert
 
 from flask import Flask, request
 
