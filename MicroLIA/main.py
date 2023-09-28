@@ -3,57 +3,46 @@
 
 """Classify alerts using MicroLIA (Goodines et al. 2020, https://arxiv.org/abs/2004.14347)."""
 
-from datetime import datetime, timezone
-import io
 import os
-
-from google.cloud import logging
-import fastavro
-
-import numpy as np
-import pandas as pd
-import pittgoogle
+from datetime import datetime, timezone
 from pathlib import Path
 
-from flask import Flask, request
+import flask
+import google.cloud.logging
+import numpy as np
+import pittgoogle
 
 from MicroLIA import classify_lcs
+
+# connect the python logger to the google cloud logger
+# by default, this captures INFO level and above
+# pittgoogle uses the python logger
+# we don't currently use the python logger directly in this script, but we could
+# [TODO] make sure this is actually working
+google.cloud.logging.Client().setup_logging()
 
 PROJECT_ID = os.getenv("GCP_PROJECT")
 TESTID = os.getenv("TESTID")
 SURVEY = os.getenv("SURVEY")
 
-# connect to the logger
-logging_client = logging.Client()
-log_name = "classify-microlia-cloudrun"  # same log for all broker instances
-logger = logging_client.logger(log_name)
-
-# GCP resources used in this module
-bq_dataset = f"{SURVEY}_alerts"
-ps_topic = f"{SURVEY}-MicroLIA"
-if TESTID != "False":  # attach the testid to the names
-    bq_dataset = f"{bq_dataset}_{TESTID}"
-    ps_topic = f"{ps_topic}-{TESTID}"
-bq_table = f"{bq_dataset}.MicroLIA"
-
-schema_file = "elasticc.v0_9_1.brokerClassfication.avsc"
-schema_out = fastavro.schema.load_schema(schema_file)
-workingdir = Path(__file__).resolve().parent
-schema_map = load_schema_map(
-    SURVEY, TESTID, schema=(workingdir / f"{SURVEY}-schema-map.yml")
-)
-alert_ids = AlertIds(schema_map)
-id_keys = alert_ids.id_keys
-if SURVEY == "elasticc":
-    schema_in = "elasticc.v0_9_1.alert.avsc"
-else:
-    schema_in = None
-
+# classifier
+CLASSIFIER_NAME = "microlia"
 model_dir_name = "trained_model"
 model_file_name = "MicroLIA_ensemble_model"
-model_path = Path(__file__).resolve().parent / f"{model_dir_name}/{model_file_name}"
+MODEL_PATH = Path(__file__).resolve().parent / model_dir_name / model_file_name
 
-app = Flask(__name__)
+# incoming
+SCHEMA_IN = "elasticc.v0_9_1.alert"  # view the schema: pittgoogle.Schemas.get(SCHEMA_IN).avsc
+
+# outgoing
+HTTP_204 = 204  # http code: success (no content)
+HTTP_400 = 400  # http code: bad request
+SCHEMA_OUT = "elasticc.v0_9_1.brokerClassification"  # view the schema: pittgoogle.Schemas.get(SCHEMA_OUT).avsc
+TABLE = pittgoogle.Table.from_cloud(CLASSIFIER_NAME, survey=SURVEY, testid=TESTID)
+TOPIC = pittgoogle.Topic.from_cloud(CLASSIFIER_NAME, survey=SURVEY, testid=TESTID, projectid=PROJECT_ID)
+
+
+app = flask.Flask(__name__)
 
 
 @app.route("/", methods=["POST"])
@@ -62,61 +51,38 @@ def index():
 
     This function is intended to be triggered by Pub/Sub messages, via Cloud Run.
     """
-    envelope = request.get_json()
+    # the module runs on Cloud Run as an HTTP endpoint
+    # extract the envelope from the request that triggered the endpoint
+    # this contains a single Pub/Sub message with the alert to be processed
+    envelope = flask.request.get_json()
 
-    # do some checks
-    if not envelope:
-        msg = "no Pub/Sub message received"
-        print(f"error: {msg}")
-        return f"Bad Request: {msg}", 400
-
-    if not isinstance(envelope, dict) or "message" not in envelope:
-        msg = "invalid Pub/Sub message format"
-        print(f"error: {msg}")
-        return f"Bad Request: {msg}", 400
-
-    # unpack the alert
-    msg = envelope["message"]
-
-    alert_dict = open_alert(msg["data"], load_schema=schema_in)
-    a_ids = alert_ids.extract_ids(alert_dict=alert_dict)
-
+    # unpack the alert. raises a `BadRequest` if the envelope does not contain a valid message
     try:
-        publish_time = datetime.strptime(
-            msg["publish_time"].replace("Z", "+00:00"), "%Y-%m-%dT%H:%M:%S.%f%z"
-        )
-    except ValueError:
-        publish_time = datetime.strptime(
-            msg["publish_time"].replace("Z", "+00:00"), "%Y-%m-%dT%H:%M:%S%z"
-        )
-
-    attrs = {
-        **msg["attributes"],
-        "brokerIngestTimestamp": publish_time,
-        id_keys.objectId: str(a_ids.objectId),
-        id_keys.sourceId: str(a_ids.sourceId),
-    }
+        alert = pittgoogle.Alert.from_cloud_run(envelope=envelope, schema_name=SCHEMA_IN)
+    except pittgoogle.exceptions.BadRequest as exc:
+        return str(exc), HTTP_400
 
     # classify
-    classifications = _classify(alert_dict)
-    errors = gcp_utils.insert_rows_bigquery(bq_table, [classifications])
-    if len(errors) > 0:
-        logger.log_text(f"BigQuery insert error: {errors}", severity="WARNING")
+    classifications = _classify(alert)
 
-    # create the message for elasticc and publish the stream
-    avro = _create_elasticc_msg(dict(alert=alert_dict, MicroLIA=classifications), attrs)
-    gcp_utils.publish_pubsub(ps_topic, avro, attrs=attrs)
+    # publish
+    TOPIC.publish(_create_outgoing_alert(alert, classifications))
+    TABLE.insert_rows([classifications])
 
-    return ("", 204)
+    return "", HTTP_204
 
 
-def _classify(model, alert_dict: dict) -> dict:
+def _classify(model, alert: pittgoogle.Alert) -> dict:
     """Classify the alert using MicroLIA."""
     # init
-    df = _format_for_classifier(alert_dict)
+    df = alert.dataframe
+    # get_key returns the name that the survey uses for a given field
+    # for the full mapping, see alert.schema.map
+    mjd = alert.get_key("mjd")
+    flux, fluxerr = alert.get_key("flux"), alert.get_key("fluxerr")
 
     # classify
-    prediction = model.predict(df["MJD"], df["flux"], df["fluxErr"], convert=False)
+    prediction = model.predict(df[mjd], df[flux], df[fluxerr], convert=False)
 
     # prediction is going to be a 2D numpy array of [[pred_class, pred_prob], ...]
     # with both pred_class and pred_prob stored as floats
@@ -126,12 +92,12 @@ def _classify(model, alert_dict: dict) -> dict:
     # Map to a dict from the 2D array to make later look ups easier
     classifications = {int(pc): pp for (pc, pp) in prediction}
 
-    # extract results to dict and attach object/source ids.
+    # extract results to a dict that matches the TABLE schema (TABLE.table.schema)
     # use `.item()` to convert numpy -> python types for later json serialization
     classification_dict = {
-        id_keys.alertId: df.alertId,
-        id_keys.objectId: df.objectId,
-        id_keys.sourceId: df.sourceId,
+        "alertId": alert.alertid,
+        "diaObjectId": alert.objectid,
+        "diaSourceId": alert.sourceid,
         "prob_class0": classifications[0].item(),
         "prob_class1": classifications[1].item(),
         "prob_class2": classifications[2].item(),
@@ -143,34 +109,16 @@ def _classify(model, alert_dict: dict) -> dict:
     return classification_dict
 
 
-def _format_for_classifier(alert_dict: dict) -> pd.DataFrame:
-    """Compute features and cast to a DataFrame for input to MicroLIA."""
-    # cast alert to dataframe
-    alert_df = data_utils.alert_dict_to_dataframe(alert_dict, schema_map)
+def _create_outgoing_alert(alert_in: pittgoogle.Alert, results: dict) -> pittgoogle.Alert:
+    """Combine the incoming alert with the classification results to create the outgoing alert."""
+    # need to convert the broker ingest timestamp to conform with SCHEMA_OUT
+    # occasionally a Pub/Sub timestamp doesn't include microseconds, so we need a try/except
+    broker_ingest_time = alert_in.msg.publish_time.replace("Z", "+00:00")
+    try:
+        broker_ingest_time = datetime.strptime(broker_ingest_time, "%Y-%m-%dT%H:%M:%S.%f%z")
+    except ValueError:
+        broker_ingest_time = datetime.strptime(broker_ingest_time, "%Y-%m-%dT%H:%M:%S%z")
 
-    # start a dataframe for input to the classifier
-    classifier_df = pd.DataFrame(data={"ID": alert_df.objectId}, index=alert_df.index)
-    classifier_df.alertId = alert_df.alertId
-    classifier_df.objectId = alert_df.objectId
-    classifier_df.sourceId = alert_df.sourceId
-    classifier_df["band"] = alert_df["filterName"]
-    classifier_df["flux"] = alert_df["psFlux"]
-    classifier_df["fluxErr"] = alert_df["psFluxErr"]
-    classifier_df["MJD"] = alert_df["midPointTai"]
-
-    return classifier_df
-
-
-def _create_elasticc_msg(alert_dict, attrs):
-    """Create a message according to the ELAsTiCC broker classifications schema.
-    https://github.com/LSSTDESC/plasticc_alerts/blob/main/Examples/plasticc_schema
-    """
-    # original elasticc alert as a dict
-    elasticc_alert = alert_dict["alert"]
-    results = alert_dict["MicroLIA"]
-
-    elasticcPublishTimestamp = int(attrs["kafka.timestamp"])
-    brokerIngestTimestamp = attrs.pop("brokerIngestTimestamp")
     # Were should we get in and key this version?
     brokerVersion = "v0.6"
 
@@ -180,39 +128,35 @@ def _create_elasticc_msg(alert_dict, attrs):
     # I'm not really sure where CVs should be (prob_class0).
     # I'll put them under Periodic/Other (2321).
     classifications = [
-        {
-            "classId": 2321,
-            "probability": results["prob_class0"],
-            "classId": 2326,
-            "probability": results["prob_class1"],
-            "classId": 2235,
-            "probability": results["prob_class2"],
-            "classId": 2323,
-            "probability": results["prob_class3"],
-        },
+        {"classId": 2321, "probability": results["prob_class0"]},
+        {"classId": 2326, "probability": results["prob_class1"]},
+        {"classId": 2235, "probability": results["prob_class2"]},
+        {"classId": 2323, "probability": results["prob_class3"]},
     ]
 
-    msg = {
-        "alertId": elasticc_alert["alertId"],
-        "diaSourceId": get_value("sourceId", elasticc_alert, schema_map),
-        "elasticcPublishTimestamp": elasticcPublishTimestamp,
-        "brokerIngestTimestamp": brokerIngestTimestamp,
+    # construct a dict that conforms to SCHEMA_OUT
+    outgoing_dict = {
+        "alertId": alert_in.alertid,
+        "diaSourceId": alert_in.sourceid,
+        "elasticcPublishTimestamp": int(alert_in.attributes["kafka.timestamp"]),
+        "brokerIngestTimestamp": broker_ingest_time,
         "brokerName": "Pitt-Google Broker",
         "brokerVersion": brokerVersion,
         "classifierName": "MicroLIA_v2.6",
-        "classifierParams": model_path,  # Record the training file
+        "classifierParams": MODEL_PATH,  # Record the training file
         "classifications": classifications,
     }
 
-    # avro serialize the dictionary
-    avro = _dict_to_avro(msg, schema_out)
-    return avro
+    # create the outgoing Alert
+    # typically the pitt-google broker adds the IDs to the alert attributes
+    # however, we're receiving alerts directly from the broker's consumer so the IDs are not yet attached
+    # let's add them. these are not currently used but may help downstream users.
+    alert_in.add_id_attributes()
+    alert_out = pittgoogle.Alert.from_dict(
+        payload=outgoing_dict, attributes=alert_in.attributes, schema_name=SCHEMA_OUT
+    )
+    # also add the predicted class to the attributes
+    # again, not currently used, but is good practice and may help downstream users
+    alert_out.attributes[CLASSIFIER_NAME] = results["predicted_class"]
 
-
-def _dict_to_avro(msg: dict, schema: dict):
-    """Avro serialize a dictionary."""
-    fout = io.BytesIO()
-    fastavro.schemaless_writer(fout, schema, msg)
-    fout.seek(0)
-    avro = fout.getvalue()
-    return avro
+    return alert_out
