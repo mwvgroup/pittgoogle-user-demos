@@ -12,7 +12,7 @@ seaborn
 microlia==2.6.3
 # Cloud functions don't support GPUs
 # So we download the following wheel that provides pytorch without GPU
-https://download.pytorch.org/whl/cpu/torch-1.9.0%2Bcpu-cp37-cp37m-linux_x86_64.whl
+https://download.pytorch.org/whl/cpu/torch-2.0.1%2Bcpu-cp311-cp311-linux_x86_64.whl
 # For more details see
 # https://stackoverflow.com/questions/55449313/google-cloud-function-python-3-7-requirements-txt-makes-deploy-fail
 tqdm
