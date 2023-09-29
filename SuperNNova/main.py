@@ -142,7 +142,7 @@ def _create_outgoing_alert(alert_in: pittgoogle.Alert, results: dict) -> pittgoo
         "brokerName": "Pitt-Google Broker",
         "brokerVersion": "v0.6",
         "classifierName": "SuperNNova_v1.3",
-        "classifierParams": MODEL_PATH,  # record the training file
+        "classifierParams": str(MODEL_PATH),  # record the training file
         "classifications": classifications,
     }
 
@@ -156,6 +156,6 @@ def _create_outgoing_alert(alert_in: pittgoogle.Alert, results: dict) -> pittgoo
     )
     # also add the predicted class to the attributes
     # again, not currently used, but is good practice and may help downstream users
-    alert_out.attributes[CLASSIFIER_NAME] = classifications["predicted_class"]
+    alert_out.attributes[CLASSIFIER_NAME] = results["predicted_class"]
 
     return alert_out
