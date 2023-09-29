@@ -93,7 +93,7 @@ def _classify(model, alert: pittgoogle.Alert) -> dict:
     classifications = {int(pc): pp for (pc, pp) in prediction}
 
     # extract results to a dict that matches the TABLE schema (TABLE.table.schema)
-    # use `.item()` to convert numpy -> python types for later json serialization
+    # use `.item()` to convert numpy -> python types for later serialization
     classification_dict = {
         "alertId": alert.alertid,
         "diaObjectId": alert.objectid,
@@ -143,7 +143,7 @@ def _create_outgoing_alert(alert_in: pittgoogle.Alert, results: dict) -> pittgoo
         "brokerName": "Pitt-Google Broker",
         "brokerVersion": brokerVersion,
         "classifierName": "MicroLIA_v2.6",
-        "classifierParams": MODEL_PATH,  # Record the training file
+        "classifierParams": str(MODEL_PATH),  # Record the training file
         "classifications": classifications,
     }
 
