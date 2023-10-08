@@ -25,10 +25,12 @@ PROJECT_ID = os.getenv("GCP_PROJECT")
 TESTID = os.getenv("TESTID")
 SURVEY = os.getenv("SURVEY")
 
+BROKER_NAME = "Pitt-Google Broker"
 MODULE_NAME = "microlia"
 MODULE_VERSION = "v0.6"
 
 # classifier
+CLASSIFIER_NAME = "MicroLIA_v2.6"  # include the version
 model_dir_name = "trained_model"
 model_file_name = "MicroLIA_ensemble_model"
 MODEL_PATH = Path(__file__).resolve().parent / model_dir_name / model_file_name
@@ -143,23 +145,18 @@ def _create_outgoing_alert(alert_in: pittgoogle.Alert, results: dict) -> pittgoo
         "diaSourceId": alert_in.sourceid,
         "elasticcPublishTimestamp": int(alert_in.attributes["kafka.timestamp"]),  # coercible to avro timestamp-millis
         "brokerIngestTimestamp": alert_in.msg.publish_time,
-        "brokerName": "Pitt-Google Broker",
+        "brokerName": BROKER_NAME,
         "brokerVersion": MODULE_VERSION,
-        "classifierName": "MicroLIA_v2.6",
+        "classifierName": CLASSIFIER_NAME,
         "classifierParams": str(MODEL_PATH),  # Record the training file
         "classifications": classifications,
     }
 
     # create the outgoing Alert
-    # typically the pitt-google broker adds the IDs to the alert attributes
-    # however, we're receiving alerts directly from the broker's consumer so the IDs are not yet attached
-    # let's add them. these are not currently used but may help downstream users.
-    alert_in.add_id_attributes()
     alert_out = pittgoogle.Alert.from_dict(
         payload=outgoing_dict, attributes=alert_in.attributes, schema_name=SCHEMA_OUT
     )
-    # also add the predicted class to the attributes
-    # again, not currently used, but is good practice and may help downstream users
+    # add the predicted class to the attributes. may help downstream users filter messages.
     alert_out.attributes[MODULE_NAME] = results["predicted_class"]
 
     return alert_out
