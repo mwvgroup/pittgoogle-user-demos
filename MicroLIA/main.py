@@ -25,33 +25,47 @@ PROJECT_ID = os.getenv("GCP_PROJECT")
 TESTID = os.getenv("TESTID")
 SURVEY = os.getenv("SURVEY")
 
+MODULE_NAME = "microlia"
+MODULE_VERSION = "v0.6"
+
 # classifier
-CLASSIFIER_NAME = "microlia"
 model_dir_name = "trained_model"
 model_file_name = "MicroLIA_ensemble_model"
 MODEL_PATH = Path(__file__).resolve().parent / model_dir_name / model_file_name
 
 # incoming
+# a url route is used in setup.sh when the trigger subscription is created
+# it is possible to define multiple routes in a single module and trigger them using different subscriptions
+ROUTE_RUN = "/"  # url route that will trigger run()
 SCHEMA_IN = "elasticc.v0_9_1.alert"  # view the schema: pittgoogle.Schemas.get(SCHEMA_IN).avsc
 
 # outgoing
 HTTP_204 = 204  # http code: success (no content)
 HTTP_400 = 400  # http code: bad request
 SCHEMA_OUT = "elasticc.v0_9_1.brokerClassification"  # view the schema: pittgoogle.Schemas.get(SCHEMA_OUT).avsc
-TABLE = pittgoogle.Table.from_cloud(CLASSIFIER_NAME, survey=SURVEY, testid=TESTID)
-TOPIC = pittgoogle.Topic.from_cloud(CLASSIFIER_NAME, survey=SURVEY, testid=TESTID, projectid=PROJECT_ID)
+# pittgoogle will construct the full resource names from the MODULE_NAME, SURVEY, and TESTID
+TABLE = pittgoogle.Table.from_cloud(MODULE_NAME, survey=SURVEY, testid=TESTID)
+TOPIC = pittgoogle.Topic.from_cloud(MODULE_NAME, survey=SURVEY, testid=TESTID, projectid=PROJECT_ID)
 
 
 app = flask.Flask(__name__)
 
 
-@app.route("/", methods=["POST"])
-def index():
-    """Classify alert; publish and store results.
+@app.route(ROUTE_RUN, methods=["POST"])
+def run():
+    """Classify the alert; publish and store results.
 
-    This function is intended to be triggered by Pub/Sub messages, via Cloud Run.
+    This module is intended to be deployed as a Cloud Run service. It will operate as an HTTP endpoint
+    triggered by Pub/Sub messages. This function will be called once for every message sent to this route.
+    It should accept the incoming HTTP request and return a response.
+
+    Returns
+    -------
+    response : tuple(str, int)
+        Tuple containing the response body (string) and HTTP status code (int). Flask will convert the
+        tuple into a proper HTTP response. Note that the response is a status message for the web server
+        and should not contain the classification results.
     """
-    # the module runs on Cloud Run as an HTTP endpoint
     # extract the envelope from the request that triggered the endpoint
     # this contains a single Pub/Sub message with the alert to be processed
     envelope = flask.request.get_json()
@@ -119,9 +133,6 @@ def _create_outgoing_alert(alert_in: pittgoogle.Alert, results: dict) -> pittgoo
     except ValueError:
         broker_ingest_time = datetime.strptime(broker_ingest_time, "%Y-%m-%dT%H:%M:%S%z")
 
-    # Were should we get in and key this version?
-    brokerVersion = "v0.6"
-
     # Write down the mappings between our classifications
     # and the ELASTTIC taxonomy
     # https://github.com/LSSTDESC/elasticc/blob/main/taxonomy/taxonomy.ipynb
@@ -141,7 +152,7 @@ def _create_outgoing_alert(alert_in: pittgoogle.Alert, results: dict) -> pittgoo
         "elasticcPublishTimestamp": int(alert_in.attributes["kafka.timestamp"]),
         "brokerIngestTimestamp": broker_ingest_time,
         "brokerName": "Pitt-Google Broker",
-        "brokerVersion": brokerVersion,
+        "brokerVersion": MODULE_VERSION,
         "classifierName": "MicroLIA_v2.6",
         "classifierParams": str(MODEL_PATH),  # Record the training file
         "classifications": classifications,
@@ -157,6 +168,6 @@ def _create_outgoing_alert(alert_in: pittgoogle.Alert, results: dict) -> pittgoo
     )
     # also add the predicted class to the attributes
     # again, not currently used, but is good practice and may help downstream users
-    alert_out.attributes[CLASSIFIER_NAME] = results["predicted_class"]
+    alert_out.attributes[MODULE_NAME] = results["predicted_class"]
 
     return alert_out
