@@ -9,7 +9,9 @@ trigger_topic="${4:-elasticc-alerts}"
 trigger_topic_project="${5:-avid-heading-329016}"
 
 PROJECT_ID="${GOOGLE_CLOUD_PROJECT}"  # env var associated with the user's credentials
-CLASSIFIER="supernnova"
+
+MODULE_NAME="supernnova"  # lower case required by cloud run
+ROUTE_RUN="/"  # url route that will trigger main.run()
 
 #--- Make the user confirm the settings
 echo
@@ -33,7 +35,7 @@ if [ "${input}" != "y" ]; then
 fi
 
 # GCP resources & variables used in this script that need a testid
-cr_module_name="${survey}-${CLASSIFIER}"  # lower case required by cloud run
+cr_module_name="${survey}-${MODULE_NAME}"  # lower case required by cloud run
 ps_input_subscrip="${trigger_topic}"  # pub/sub subscription used to trigger cloud run module
 bq_dataset="${PROJECT_ID}:${survey}"
 ps_output_topic="${survey}-SuperNNova"  # desc is using this. leave camel case to avoid a breaking change
@@ -47,9 +49,8 @@ fi
 
 # additional GCP resources & variables used in this script
 module_image_name="gcr.io/${PROJECT_ID}/${cr_module_name}"
-bq_table="${CLASSIFIER}"
+bq_table="${MODULE_NAME}"
 region="us-central1"
-route="/"
 runinvoker_svcact="cloud-run-invoker@${PROJECT_ID}.iam.gserviceaccount.com"
 
 # create BigQuery, Pub/Sub resources
@@ -79,7 +80,7 @@ if [ "${teardown}" != "True" ]; then
         --topic "${trigger_topic}" \
         --topic-project "${trigger_topic_project}" \
         --ack-deadline=600 \
-        --push-endpoint="${url}${route}" \
+        --push-endpoint="${url}${ROUTE_RUN}" \
         --push-auth-service-account="${runinvoker_svcact}"
 
 else
