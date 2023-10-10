@@ -61,8 +61,11 @@ bq_schema = [
     bigquery.SchemaField("prob_class0", "FLOAT"),
     bigquery.SchemaField("prob_class1", "FLOAT"),
     bigquery.SchemaField("predicted_class", "INTEGER"),
-    bigquery.SchemaField("timestamp", "TIMESTAMP")
+    bigquery.SchemaField("elasticcPublishTimestamp", "INTEGER"),
+    bigquery.SchemaField("brokerIngestTimestamp", "TIMESTAMP"),
+    bigquery.SchemaField("classifierTimestamp", "TIMESTAMP")
 ]
+
 
 
 app = Flask(__name__)
@@ -104,7 +107,7 @@ def index():
     }
 
     # classify
-    snn_dict = _classify_with_snn(alert_dict)
+    snn_dict = _classify_with_snn(alert_dict, attrs)
 
     # create the message for elasticc and publish the stream
     avro = _create_elasticc_msg(dict(alert=alert_dict, SuperNNova=snn_dict), attrs)
@@ -117,7 +120,7 @@ def index():
 
     return ("", 204)
 
-def _classify_with_snn(alert_dict: dict) -> dict:
+def _classify_with_snn(alert_dict: dict, attrs: dict) -> dict:
     """Classify the alert using SuperNNova."""
     # init
     snn_df = _format_for_snn(alert_dict)
@@ -135,7 +138,9 @@ def _classify_with_snn(alert_dict: dict) -> dict:
         "prob_class0": pred_probs[0].item(),
         "prob_class1": pred_probs[1].item(),
         "predicted_class": np.argmax(pred_probs).item(),
-        "timestamp": datetime.now(timezone.utc)
+        "elasticcPublishTimestamp": int(attrs["kafka.timestamp"]),
+        "brokerIngestTimestamp": attrs.pop("brokerIngestTimestamp"),
+        "classifierTimestamp": datetime.now(timezone.utc)
     }
 
     return snn_dict
