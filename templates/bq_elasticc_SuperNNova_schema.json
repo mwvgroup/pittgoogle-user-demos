@@ -32,7 +32,19 @@
     {
       "description": "timestamp for testing",
       "mode": "NULLABLE",
-      "name": "timestamp",
+      "name": "elasticcPublishTimestamp",
+      "type": "INTEGER"
+    },
+    {
+      "description": "timestamp for testing",
+      "mode": "NULLABLE",
+      "name": "brokerIngestTimestamp",
+      "type": "TIMESTAMP"
+    },
+    {
+      "description": "timestamp for testing",
+      "mode": "NULLABLE",
+      "name": "classifierTimestamp",
       "type": "TIMESTAMP"
     }
   ]
