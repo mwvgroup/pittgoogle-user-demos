@@ -30,19 +30,19 @@
       "type": "INTEGER"
     },
     {
-      "description": "timestamp for testing",
+      "description": "timestamp from originating ELAsTiCC alert",
       "mode": "NULLABLE",
       "name": "elasticcPublishTimestamp",
       "type": "INTEGER"
     },
     {
-      "description": "timestamp for testing",
+      "description": "timestamp of broker ingestion of ELAsTiCC alert",
       "mode": "NULLABLE",
       "name": "brokerIngestTimestamp",
       "type": "TIMESTAMP"
     },
     {
-      "description": "timestamp for testing",
+      "description": "timestamp of SuperNNova classification of ELAsTiCC alert",
       "mode": "NULLABLE",
       "name": "classifierTimestamp",
       "type": "TIMESTAMP"
