@@ -61,12 +61,10 @@ bq_schema = [
     bigquery.SchemaField("prob_class0", "FLOAT"),
     bigquery.SchemaField("prob_class1", "FLOAT"),
     bigquery.SchemaField("predicted_class", "INTEGER"),
-    bigquery.SchemaField("elasticcPublishTimestamp", "INTEGER"),
+    bigquery.SchemaField("elasticcPublishTimestamp", "TIMESTAMP"),
     bigquery.SchemaField("brokerIngestTimestamp", "TIMESTAMP"),
     bigquery.SchemaField("classifierTimestamp", "TIMESTAMP")
 ]
-
-
 
 app = Flask(__name__)
 @app.route("/", methods=["POST"])
@@ -129,6 +127,9 @@ def _classify_with_snn(alert_dict: dict, attrs: dict) -> dict:
     # classify
     _, pred_probs = classify_lcs(snn_df, model_path, device)
 
+    kafka_timestamp = datetime.fromtimestamp(int(attrs["kafka.timestamp"])/1000)
+    formatted_kafka_timestamp = kafka_timestamp.strftime("%Y-%m-%d %H:%M:%S.%f") + " UTC"
+
     # extract results to dict and attach object/source ids.
     # use `.item()` to convert numpy -> python types for later json serialization
     pred_probs = pred_probs.flatten()
@@ -138,8 +139,8 @@ def _classify_with_snn(alert_dict: dict, attrs: dict) -> dict:
         "prob_class0": pred_probs[0].item(),
         "prob_class1": pred_probs[1].item(),
         "predicted_class": np.argmax(pred_probs).item(),
-        "elasticcPublishTimestamp": int(attrs["kafka.timestamp"]),
-        "brokerIngestTimestamp": attrs.pop("brokerIngestTimestamp"),
+        "elasticcPublishTimestamp": formatted_kafka_timestamp,
+        "brokerIngestTimestamp": attrs["brokerIngestTimestamp"],
         "classifierTimestamp": datetime.now(timezone.utc)
     }
 
