@@ -128,10 +128,6 @@ def _classify_with_snn(alert_dict: dict, attrs: dict) -> dict:
     # classify
     _, pred_probs = classify_lcs(snn_df, model_path, device)
 
-    # retrieve and format elasticcPublishTimestamp
-    kafka_timestamp = datetime.fromtimestamp(int(attrs["kafka.timestamp"])/1000) # converts kafka.timestamp from milliseconds to seconds
-    formatted_kafka_timestamp = kafka_timestamp.strftime("%Y-%m-%d %H:%M:%S.%f") + " UTC"
-
     # extract results to dict and attach alert/object/source ids.
     # use `.item()` to convert numpy -> python types for later json serialization
     pred_probs = pred_probs.flatten()
@@ -142,7 +138,7 @@ def _classify_with_snn(alert_dict: dict, attrs: dict) -> dict:
         "prob_class0": pred_probs[0].item(),
         "prob_class1": pred_probs[1].item(),
         "predicted_class": np.argmax(pred_probs).item(),
-        "elasticcPublishTimestamp": formatted_kafka_timestamp,
+        "elasticcPublishTimestamp": int(attrs["kafka.timestamp"])/1000,
         "brokerIngestTimestamp": attrs["brokerIngestTimestamp"],
         "classifierTimestamp": datetime.now(timezone.utc)
     }
