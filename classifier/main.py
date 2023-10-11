@@ -56,14 +56,16 @@ model_file_name = "vanilla_S_0_CLF_2_R_none_photometry_DF_1.0_N_global_lstm_32x2
 model_path = Path(__file__).resolve().parent / f"{model_dir_name}/{model_file_name}"
 bq_client = bigquery.Client(project=PROJECT_ID)
 bq_schema = [
-    bigquery.SchemaField("diaObjectId", "STRING"),
+    bigquery.SchemaField("alertId", "INTEGER"),
+    bigquery.SchemaField("diaObjectId", "INTEGER"),
     bigquery.SchemaField("diaSourceId", "INTEGER"),
     bigquery.SchemaField("prob_class0", "FLOAT"),
     bigquery.SchemaField("prob_class1", "FLOAT"),
     bigquery.SchemaField("predicted_class", "INTEGER"),
-    bigquery.SchemaField("timestamp", "TIMESTAMP")
+    bigquery.SchemaField("elasticcPublishTimestamp", "TIMESTAMP"),
+    bigquery.SchemaField("brokerIngestTimestamp", "TIMESTAMP"),
+    bigquery.SchemaField("classifierTimestamp", "TIMESTAMP")
 ]
-
 
 app = Flask(__name__)
 @app.route("/", methods=["POST"])
@@ -104,7 +106,7 @@ def index():
     }
 
     # classify
-    snn_dict = _classify_with_snn(alert_dict)
+    snn_dict = _classify_with_snn(alert_dict, attrs)
 
     # create the message for elasticc and publish the stream
     avro = _create_elasticc_msg(dict(alert=alert_dict, SuperNNova=snn_dict), attrs)
@@ -117,7 +119,7 @@ def index():
 
     return ("", 204)
 
-def _classify_with_snn(alert_dict: dict) -> dict:
+def _classify_with_snn(alert_dict: dict, attrs: dict) -> dict:
     """Classify the alert using SuperNNova."""
     # init
     snn_df = _format_for_snn(alert_dict)
@@ -126,16 +128,19 @@ def _classify_with_snn(alert_dict: dict) -> dict:
     # classify
     _, pred_probs = classify_lcs(snn_df, model_path, device)
 
-    # extract results to dict and attach object/source ids.
+    # extract results to dict and attach alert/object/source ids.
     # use `.item()` to convert numpy -> python types for later json serialization
     pred_probs = pred_probs.flatten()
     snn_dict = {
+        "alertId": int(alert_dict["alertId"]),
         id_keys.objectId: snn_df.objectId,
         id_keys.sourceId: snn_df.sourceId,
         "prob_class0": pred_probs[0].item(),
         "prob_class1": pred_probs[1].item(),
         "predicted_class": np.argmax(pred_probs).item(),
-        "timestamp": datetime.now(timezone.utc)
+        "elasticcPublishTimestamp": int(attrs["kafka.timestamp"])/1000,
+        "brokerIngestTimestamp": attrs["brokerIngestTimestamp"],
+        "classifierTimestamp": datetime.now(timezone.utc)
     }
 
     return snn_dict
