@@ -56,7 +56,8 @@ model_file_name = "vanilla_S_0_CLF_2_R_none_photometry_DF_1.0_N_global_lstm_32x2
 model_path = Path(__file__).resolve().parent / f"{model_dir_name}/{model_file_name}"
 bq_client = bigquery.Client(project=PROJECT_ID)
 bq_schema = [
-    bigquery.SchemaField("diaObjectId", "STRING"),
+    bigquery.SchemaField("alertId", "INTEGER"),
+    bigquery.SchemaField("diaObjectId", "INTEGER"),
     bigquery.SchemaField("diaSourceId", "INTEGER"),
     bigquery.SchemaField("prob_class0", "FLOAT"),
     bigquery.SchemaField("prob_class1", "FLOAT"),
@@ -127,13 +128,16 @@ def _classify_with_snn(alert_dict: dict, attrs: dict) -> dict:
     # classify
     _, pred_probs = classify_lcs(snn_df, model_path, device)
 
-    kafka_timestamp = datetime.fromtimestamp(int(attrs["kafka.timestamp"])/1000)
+    # retrieve and format elasticcPublishTimestamp
+    kafka_timestamp = datetime.fromtimestamp(int(attrs["kafka.timestamp"])/1000) # converts kafka.timestamp from milliseconds to seconds
     formatted_kafka_timestamp = kafka_timestamp.strftime("%Y-%m-%d %H:%M:%S.%f") + " UTC"
 
-    # extract results to dict and attach object/source ids.
+    # extract results to dict and attach alert/object/source ids.
     # use `.item()` to convert numpy -> python types for later json serialization
+    elasticc_alert = alert_dict["alert"]
     pred_probs = pred_probs.flatten()
     snn_dict = {
+        "alertId": elasticc_alert["alertId"],
         id_keys.objectId: snn_df.objectId,
         id_keys.sourceId: snn_df.sourceId,
         "prob_class0": pred_probs[0].item(),
