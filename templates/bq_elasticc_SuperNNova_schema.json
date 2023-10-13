@@ -1,9 +1,15 @@
 [
     {
+      "description": "unique alert identifer",
+      "mode": "REQUIRED",
+      "name": "alertId",
+      "type": "INTEGER"
+    },
+    {
       "description": "object identifier or name",
       "mode": "REQUIRED",
       "name": "diaObjectId",
-      "type": "STRING"
+      "type": "INTEGER"
     },
     {
       "description": "Candidate ID from operations DB",
@@ -30,9 +36,21 @@
       "type": "INTEGER"
     },
     {
-      "description": "timestamp for testing",
+      "description": "timestamp from originating ELAsTiCC alert",
       "mode": "NULLABLE",
-      "name": "timestamp",
+      "name": "elasticcPublishTimestamp",
+      "type": "TIMESTAMP"
+    },
+    {
+      "description": "timestamp of broker ingestion of ELAsTiCC alert",
+      "mode": "NULLABLE",
+      "name": "brokerIngestTimestamp",
+      "type": "TIMESTAMP"
+    },
+    {
+      "description": "timestamp of SuperNNova classification of ELAsTiCC alert",
+      "mode": "NULLABLE",
+      "name": "classifierTimestamp",
       "type": "TIMESTAMP"
     }
   ]
