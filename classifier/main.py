@@ -62,6 +62,7 @@ bq_schema = [
     bigquery.SchemaField("prob_class0", "FLOAT"),
     bigquery.SchemaField("prob_class1", "FLOAT"),
     bigquery.SchemaField("predicted_class", "INTEGER"),
+    bigquery.SchemaField("brokerVersion", "STRING"),
     bigquery.SchemaField("elasticcPublishTimestamp", "TIMESTAMP"),
     bigquery.SchemaField("brokerIngestTimestamp", "TIMESTAMP"),
     bigquery.SchemaField("classifierTimestamp", "TIMESTAMP")
@@ -131,6 +132,7 @@ def _classify_with_snn(alert_dict: dict, attrs: dict) -> dict:
     # extract results to dict and attach alert/object/source ids.
     # use `.item()` to convert numpy -> python types for later json serialization
     pred_probs = pred_probs.flatten()
+    brokerVersion = "v0.7"
     snn_dict = {
         "alertId": int(alert_dict["alertId"]),
         id_keys.objectId: snn_df.objectId,
@@ -138,6 +140,7 @@ def _classify_with_snn(alert_dict: dict, attrs: dict) -> dict:
         "prob_class0": pred_probs[0].item(),
         "prob_class1": pred_probs[1].item(),
         "predicted_class": np.argmax(pred_probs).item(),
+        "brokerVersion": brokerVersion,
         "elasticcPublishTimestamp": int(attrs["kafka.timestamp"])/1000,
         "brokerIngestTimestamp": attrs["brokerIngestTimestamp"],
         "classifierTimestamp": datetime.now(timezone.utc)
