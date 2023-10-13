@@ -36,6 +36,12 @@
       "type": "INTEGER"
     },
     {
+      "description": "classifier module version",
+      "mode": "NULLABLE",
+      "name": "brokerVersion",
+      "type": "STRING"
+    },
+    {
       "description": "timestamp from originating ELAsTiCC alert",
       "mode": "NULLABLE",
       "name": "elasticcPublishTimestamp",
