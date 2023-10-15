@@ -28,6 +28,9 @@ PROJECT_ID = os.getenv("GCP_PROJECT")
 TESTID = os.getenv("TESTID")
 SURVEY = os.getenv("SURVEY")
 
+# specify module version
+brokerVersion = "v0.7"
+
 # connect to the logger
 logging_client = logging.Client()
 log_name = "classify-snn-cloudrun"  # same log for all broker instances
@@ -132,7 +135,6 @@ def _classify_with_snn(alert_dict: dict, attrs: dict) -> dict:
     # extract results to dict and attach alert/object/source ids.
     # use `.item()` to convert numpy -> python types for later json serialization
     pred_probs = pred_probs.flatten()
-    brokerVersion = "v0.7"
     snn_dict = {
         "alertId": int(alert_dict["alertId"]),
         id_keys.objectId: snn_df.objectId,
@@ -177,7 +179,6 @@ def _create_elasticc_msg(alert_dict, attrs):
     # here are a few things you'll need
     elasticcPublishTimestamp = int(attrs["kafka.timestamp"])
     brokerIngestTimestamp = attrs.pop("brokerIngestTimestamp")
-    brokerVersion = "v0.7"
 
     classifications = [
         {
