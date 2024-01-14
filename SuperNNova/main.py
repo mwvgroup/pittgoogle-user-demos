@@ -136,7 +136,7 @@ def _format_for_classifier(alert: pittgoogle.Alert) -> pd.DataFrame:
 
 def _create_outgoing_alert(alert_in: pittgoogle.Alert, results: dict) -> pittgoogle.Alert:
     """Combine the incoming alert with the classification results to create the outgoing alert."""
-    # write down the mappings between our classifications and the ELASTTIC taxonomy
+    # write down the mappings between our classifications and the ELAsTiCC taxonomy
     # https://github.com/LSSTDESC/elasticc/blob/main/taxonomy/taxonomy.ipynb
     classifications = [
         {"classId": 2222, "probability": results["prob_class0"]},
@@ -146,7 +146,7 @@ def _create_outgoing_alert(alert_in: pittgoogle.Alert, results: dict) -> pittgoo
     outgoing_dict = {
         "alertId": alert_in.alertid,
         "diaSourceId": alert_in.sourceid,
-        "elasticcPublishTimestamp": int(alert_in.attributes["kafka.timestamp"]),  # coercible to avro timestamp-millis
+        "elasticcPublishTimestamp": int(alert_in.attributes["kafka.timestamp"]),
         "brokerIngestTimestamp": alert_in.msg.publish_time,
         "brokerName": BROKER_NAME,
         "brokerVersion": MODULE_VERSION,

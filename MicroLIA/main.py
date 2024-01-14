@@ -128,7 +128,7 @@ def _classify(model, alert: pittgoogle.Alert) -> dict:
 def _create_outgoing_alert(alert_in: pittgoogle.Alert, results: dict) -> pittgoogle.Alert:
     """Combine the incoming alert with the classification results to create the outgoing alert."""
     # Write down the mappings between our classifications
-    # and the ELASTTIC taxonomy
+    # and the ELAsTiCC taxonomy
     # https://github.com/LSSTDESC/elasticc/blob/main/taxonomy/taxonomy.ipynb
     # I'm not really sure where CVs should be (prob_class0).
     # I'll put them under Periodic/Other (2321).
@@ -143,7 +143,7 @@ def _create_outgoing_alert(alert_in: pittgoogle.Alert, results: dict) -> pittgoo
     outgoing_dict = {
         "alertId": alert_in.alertid,
         "diaSourceId": alert_in.sourceid,
-        "elasticcPublishTimestamp": int(alert_in.attributes["kafka.timestamp"]),  # coercible to avro timestamp-millis
+        "elasticcPublishTimestamp": int(alert_in.attributes["kafka.timestamp"]),
         "brokerIngestTimestamp": alert_in.msg.publish_time,
         "brokerName": BROKER_NAME,
         "brokerVersion": MODULE_VERSION,
