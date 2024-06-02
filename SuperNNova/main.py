@@ -108,7 +108,11 @@ def _classify(alert: pittgoogle.Alert) -> dict:
         "prob_class0": pred_probs[0].item(),
         "prob_class1": pred_probs[1].item(),
         "predicted_class": np.argmax(pred_probs).item(),
-        "timestamp": datetime.now(timezone.utc),
+        "brokerVersion": MODULE_VERSION,
+        # divide by 1000 to switch millisecond -> microsecond precision for BigQuery
+        "elasticcPublishTimestamp": int(alert.attributes["kafka.timestamp"]) / 1000,
+        "brokerIngestTimestamp": alert.msg.publish_time,
+        "classifierTimestamp": datetime.now(timezone.utc),
     }
 
     return classifications
@@ -146,10 +150,11 @@ def _create_outgoing_alert(alert_in: pittgoogle.Alert, results: dict) -> pittgoo
     outgoing_dict = {
         "alertId": alert_in.alertid,
         "diaSourceId": alert_in.sourceid,
-        "elasticcPublishTimestamp": int(alert_in.attributes["kafka.timestamp"]),
-        "brokerIngestTimestamp": alert_in.msg.publish_time,
+        # multiply by 1000 to switch microsecond -> millisecond precision for elasticc schema
+        "elasticcPublishTimestamp": int(results["elasticcPublishTimestamp"] * 1000),
+        "brokerIngestTimestamp": results["brokerIngestTimestamp"],
         "brokerName": BROKER_NAME,
-        "brokerVersion": MODULE_VERSION,
+        "brokerVersion": results["brokerVersion"],
         "classifierName": CLASSIFIER_NAME,
         "classifierParams": str(MODEL_PATH),  # record the training file
         "classifications": classifications,
