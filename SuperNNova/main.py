@@ -1,50 +1,56 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
+"""Classify an alert using SuperNNova (M¨oller & de Boissi`ere 2019).
 
-"""Classify alerts using SuperNNova (M¨oller & de Boissi`ere 2019)."""
+This code is intended to be containerized and deployed to Google Cloud Run.
+Once deployed, individual alerts in the "trigger" stream will be delivered to the container as HTTP requests.
+"""
 
 import os
 from datetime import datetime, timezone
 from pathlib import Path
 
-import flask
+import flask  # Manage the HTTP request containing the alert
 import google.cloud.logging
 import numpy as np
 import pandas as pd
-import pittgoogle
-from supernnova.validation.validate_onthefly import classify_lcs
+import pittgoogle  # Manipulate the alert and interact with cloud resources
+from supernnova.validation.validate_onthefly import classify_lcs  # Classify the alert
 
-# connect the python logger to the google cloud logger
-# by default, this captures INFO level and above
-# pittgoogle uses the python logger
-# we don't currently use the python logger directly in this script, but we could
-# [TODO] make sure this is actually working
+# [FIXME] Make this helpful or else delete it.
+# Connect the python logger to the google cloud logger.
+# By default, this captures INFO level and above.
+# pittgoogle uses the python logger.
+# We don't currently use the python logger directly in this script, but we could.
 google.cloud.logging.Client().setup_logging()
 
+# These environment variables are defined when running the setup.sh script.
 PROJECT_ID = os.getenv("GCP_PROJECT")
 TESTID = os.getenv("TESTID")
 SURVEY = os.getenv("SURVEY")
 
+# Provenance variables
 BROKER_NAME = "Pitt-Google Broker"
 MODULE_NAME = "supernnova"
 MODULE_VERSION = "v0.6"
 
-# classifier
-CLASSIFIER_NAME = "SuperNNova_v1.3"  # include the version
+# Classifier variables
+CLASSIFIER_NAME = "SuperNNova_v1.3"  # include the version for provenance
 model_dir_name = "ZTF_DMAM_V19_NoC_SNIa_vs_CC_forFink"
 model_file_name = "vanilla_S_0_CLF_2_R_none_photometry_DF_1.0_N_global_lstm_32x2_0.05_128_True_mean.pt"
 MODEL_PATH = Path(__file__).resolve().parent / model_dir_name / model_file_name
 
-# incoming
-# a url route is used in setup.sh when the trigger subscription is created
-# it is possible to define multiple routes in a single module and trigger them using different subscriptions
-ROUTE_RUN = "/"  # url route that will trigger run()
-SCHEMA_IN = "elasticc.v0_9_1.alert"  # view the schema: pittgoogle.Schemas.get(SCHEMA_IN).avsc
+# Variables for incoming data
+# A url route is used in setup.sh when the trigger subscription is created.
+# It is possible to define multiple routes in a single module and trigger them using different subscriptions.
+ROUTE_RUN = "/"  # HTTP route that will trigger run(). Must match setup.sh
+# Schema name of the incoming alert. View name options: pittgoogle.
+SCHEMA_IN = "elasticc.v0_9_1.alert"  # View the schema: pittgoogle.Schemas.get(SCHEMA_IN).avsc
 
-# outgoing
-HTTP_204 = 204  # http code: success (no content)
-HTTP_400 = 400  # http code: bad request
-SCHEMA_OUT = "elasticc.v0_9_1.brokerClassification"  # view the schema: pittgoogle.Schemas.get(SCHEMA_OUT).avsc
+# Variables for outgoing data
+HTTP_204 = 204  # HTTP code: Success
+HTTP_400 = 400  # HTTP code: Bad Request
+SCHEMA_OUT = "elasticc.v0_9_1.brokerClassification"  # View the schema: pittgoogle.Schemas.get(SCHEMA_OUT).avsc
 # pittgoogle will construct the full resource names from the MODULE_NAME, SURVEY, and TESTID
 TABLE = pittgoogle.Table.from_cloud(MODULE_NAME, survey=SURVEY, testid=TESTID)
 # DESC is already listening to this pubsub stream so the leave camel case to avoid a breaking change
