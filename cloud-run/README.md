@@ -1,11 +1,15 @@
 # Cloud Run Tutorial
 
-Learning Goals:
+**Learning Goals**
 
 1. Develop code to classify a live alert stream.  # [TODO] create a pittgoogle "listings" page and link to it here.
 2. Containerize and deploy the code to Cloud Run.
 
-Prerequisite: Complete the [One-Time Setup for Cloud Run](cloud-run/one-time-setup-for-cloud-run.md).
+**Prerequisites**
+
+- Complete the [One-Time Setup for Cloud Run](tutorial/cloud-run/one-time-setup-for-cloud-run.md).
+
+## Introduction
 
 Google [Cloud Run](https://cloud.google.com/run/docs/overview/what-is-cloud-run) is a Google Cloud service that runs containers as HTTP endpoints.
 It can be used to process an alert stream in real time.
@@ -22,14 +26,13 @@ The basic process is:
 This tutorial demonstrates how to complete step 2.
 It uses the pre-written SuperNNova module that is included in this repo for demonstration.
 
-## Setup
+## Environment Setup
 
 1. Open a terminal. If you set up a conda environment during the one-time setup, activate it.
+   Otherwise, make sure your environment variables are set and you've authenticated with ``gcloud auth`` (see [environment variables](https://mwvgroup.github.io/pittgoogle-client/overview/env-vars.html)).
 
-2. Make sure your environment variables are set and you've authenticated with ``gcloud auth`` (see [environment variables](https://mwvgroup.github.io/pittgoogle-client/overview/env-vars.html)).
-
-3. Set the following additional environment variables.
-   These will be used by both setup.sh and main.py.
+2. Set the following additional environment variables.
+   They will be used by both setup.sh and main.py.
 
 ```bash
 # Choose your own testid. Lower case letters and numbers only.
@@ -42,17 +45,14 @@ export SURVEY=elasticc
 export PROJECT_ID=$GOOGLE_CLOUD_PROJECT
 ```
 
-4. Cd into your classifier directory (``cd SuperNNova``).
+3. Cd into your classifier directory.
+   To follow the examples below, do `cd cloud-run/SuperNNova` from the repo root directory.
 
-5. Install other dependencies as needed.
+4. Install other dependencies as needed.
    For the SuperNNova example, you may want to run ``pip install -r requirements.txt``, but note that Cloud Run requires a special install of torch, so you will need to comment that out of the SuperNNova/requirements.txt file before installing and then separately run ``pip install torch``.
 
 6. This tutorial uses both python and shell commands, so you may want to repeat steps 1-4 so you have a separate window for each.
    In the window you will use for python, run the setup code given below.
-
-The following cloud resources will be created:
-
-- Pub/Sub subscription to a Pitt-Google alert stream. These alerts will be the input to the classifier.
 
 Imports and logging:
 
@@ -66,6 +66,12 @@ import main  # assuming we're in a classifier directory containing a main.py fil
 # Optional: For more information about what's happening, set the the logging level to INFO.
 logging.basicConfig(level="INFO")
 ```
+
+## Example 1: Get an alert for input to the classifier
+
+The following cloud resources will be created:
+
+- Pub/Sub subscription to a Pitt-Google alert stream. These alerts will be the input to the classifier.
 
 Create a subscription and pull an alert to use for testing:
 
@@ -82,21 +88,27 @@ subscrip_in.touch()
 alert = subscrip_in.pull_batch(max_messages=1)[0]
 ```
 
-## Example 1: Write code to classify a single alert
+## Example 2: Write code to classify a single alert
 
 This example shows how to develop code to classify an alert.
-It uses the `alert` obtained in the Setup section and the pre-written code in the SuperNNova module's [main.py](SuperNNova/main.py) file.
+It uses the `alert` obtained in Example 1 and the pre-written code in the SuperNNova module's [main.py](tutorial/SuperNNova/main.py) file.
 
-Everything in this section can be done locally (no cloud resources required, assuming you have already pulled the Setup `alert`).
+Everything in this section can be done locally; no cloud resources required.
 
-Access the alert data:
+Access the alert data and attributes:
 
 ```python
-# dictionary (here we'll just view the keys)
+# Alert data as a dictionary (here we'll just view the keys)
 alert.dict.keys()
 
-# pandas DataFrame
+# Alert data as a pandas DataFrame
 alert.dataframe
+
+# Alert attributes containing custom metadata set by the publisher (in this case, Pitt-Google Broker)
+alert.attributes
+
+# Publish time of the incoming message
+alert.msg.publish_time
 ```
 
 Now use the alert to develop code for your classifier module in main.py.
@@ -113,7 +125,7 @@ _, pred_probs = supernnova.validation.validate_onthefly.classify_lcs(snn_df, mai
 classifications = main._classify(alert)
 ```
 
-## Example 2: Store the classification results
+## Example 3: Store the classification results
 
 Once the alert is classified, you should store the results somewhere.
 You can send data anywhere you can write the code for, in or out of Google Cloud.
@@ -130,7 +142,7 @@ This example shows how to send results to other Google Cloud services:
     - BigQuery is helpful if you want to store the data in tabular format.
       (Note that Pub/Sub messages generally "live" for 10 days or less.)
 
-This example uses the `alert` obtained in the Setup section and the pre-written code in the SuperNNova module's [main.py](SuperNNova/main.py) that is included in this repo.
+This example uses the `alert` obtained in Example 1 and the pre-written code in the SuperNNova module's [main.py](tutorial/SuperNNova/main.py) that is included in this repo.
 
 The following cloud resources will be created:
 
@@ -143,7 +155,7 @@ Setup
 ```python
 # [TODO] Show how to create the cloud resources for main.TOPIC and main.TABLE
 
-# First, classify the alert retrieved in the Setup section.
+# First, classify the alert retrieved in Example 1.
 classifications = main._classify(alert)
 ```
 
@@ -186,12 +198,12 @@ alert_out_pulled = subscrip_out.pull_batch(max_messages=1)[0]
 alert_out_pulled.dict
 ```
 
-## Example 3: Deploy to Cloud Run and test the module
+## Example 4: Deploy to Cloud Run and test the module
 
-This example shows how to containerize the classification code in [main.py](SuperNNova/main.py) and deploy it Cloud Run, then test the module end to end.
+This example shows how to containerize the classification code in [main.py](tutorial/SuperNNova/main.py) and deploy it Cloud Run, then test the module end to end.
 You should be sure to test the code locally before doing this (see previous examples).
 
-This example uses the `alert` obtained in the Setup section and the pre-written code in the [SuperNNova directory](SuperNNova/) that is included in this repo.
+This example uses the `alert` obtained in Example 1 and the pre-written code in the [SuperNNova directory](tutorial/SuperNNova) that is included in this repo.
 The code includes the following notable files:
 
 - *main.py* : Used in the examples above.
@@ -240,7 +252,7 @@ trigger_subscrip = pittgoogle.Subscription(f"{trigger_topic.name}-{os.getenv('TE
 subscrip_out = pittgoogle.Subscription(main.TOPIC.name, topic=main.TOPIC, schema_name=main.SCHEMA_OUT)
 subscrip_out.touch()  # Make sure this exists before publishing
 
-# Publish the alert (retrieved in the Setup section) to trigger the Cloud Run module.
+# Publish the alert (retrieved in Example 1) to trigger the Cloud Run module.
 trigger_topic.publish(alert)
 
 # Pull the output alert containing the classification.
