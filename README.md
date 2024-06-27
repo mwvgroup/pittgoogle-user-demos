@@ -1,5 +1,10 @@
 # pittgoogle-user
 
+**This document is a work in progress. If you are here to read, please go directly to [cloud-run/README.md](cloud-run/README.md).**
+[TODO] [FIXME]
+
+To see what data are available, see the [Pitt-Google Data Listings](https://mwvgroup.github.io/pittgoogle-client/listing.html).
+
 This repo contains examples and tutorials for accessing astronomical data that is served by the Pitt-Google Alert Broker.
 This data includes alert streams produced by the Zwicky Transient Facility (ZTF) and the LIGO-Virgo-KAGRA (LVK) Collaboration.
 The data is available in Google Cloud in several formats:

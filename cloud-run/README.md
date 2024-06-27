@@ -2,7 +2,7 @@
 
 **Learning Goals**
 
-1. Develop code to classify a live alert stream.  # [TODO] create a pittgoogle "listings" page and link to it here.
+1. Develop code to classify a live alert stream.
 2. Containerize and deploy the code to Cloud Run.
 
 **Prerequisites**
@@ -72,6 +72,7 @@ logging.basicConfig(level="INFO")
 The following cloud resources will be created:
 
 - Pub/Sub subscription to a Pitt-Google alert stream. These alerts will be the input to the classifier.
+  To see which streams are available, see the [Pitt-Google Data Listings](https://mwvgroup.github.io/pittgoogle-client/listing.html).
 
 Create a subscription and pull an alert to use for testing:
 
