@@ -5,7 +5,7 @@ google-cloud-logging
 gunicorn==20.1.0
 h5py
 natsort
-pittgoogle-client>=0.2.1
+pittgoogle-client>=0.3.1
 scikit-learn
 seaborn
 
