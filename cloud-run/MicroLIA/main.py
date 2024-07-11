@@ -95,10 +95,10 @@ def _classify(model, alert: pittgoogle.Alert) -> dict:
     # get_key returns the name that the survey uses for a given field
     # for the full mapping, see alert.schema.map
     mjd = alert.get_key("mjd")
-    flux, fluxerr = alert.get_key("flux"), alert.get_key("fluxerr")
+    flux, flux_err = alert.get_key("flux"), alert.get_key("flux_err")
 
     # classify
-    prediction = model.predict(df[mjd], df[flux], df[fluxerr], convert=False)
+    prediction = model.predict(df[mjd], df[flux], df[flux_err], convert=False)
 
     # prediction is going to be a 2D numpy array of [[pred_class, pred_prob], ...]
     # with both pred_class and pred_prob stored as floats
