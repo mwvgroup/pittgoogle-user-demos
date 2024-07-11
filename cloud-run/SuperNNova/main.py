@@ -134,7 +134,7 @@ def _format_for_classifier(alert: pittgoogle.Alert) -> pd.DataFrame:
             # for the full mapping, see alert.schema.map
             "FLT": alert_df[alert.get_key("filter")],
             "FLUXCAL": alert_df[alert.get_key("flux")],
-            "FLUXCALERR": alert_df[alert.get_key("fluxerr")],
+            "FLUXCALERR": alert_df[alert.get_key("flux_err")],
             "MJD": alert_df[alert.get_key("mjd")],
             # add the object ID
             "SNID": [alert.objectid] * len(alert_df.index),
