@@ -72,7 +72,7 @@ logging.basicConfig(level="INFO")
 The following cloud resources will be created:
 
 - Pub/Sub subscription to a Pitt-Google alert stream. These alerts will be the input to the classifier.
-  To see which streams are available, see the [Pitt-Google Data Listings](https://mwvgroup.github.io/pittgoogle-client/listing.html).
+  To see which streams are available, see the [Pitt-Google Data Listings](https://mwvgroup.github.io/pittgoogle-client/listings.html).
 
 Create a subscription and pull an alert to use for testing:
 
@@ -206,6 +206,11 @@ You should be sure to test the code locally before doing this (see previous exam
 
 This example uses the `alert` obtained in Example 1 and the pre-written code in the [SuperNNova directory](tutorial/SuperNNova) that is included in this repo.
 The code includes the following notable files:
+
+[TODO]
+- link to files
+- add a summary doc for the deployment files
+- Explain that it's best if the classifier code you want to run is published to pypi.
 
 - *main.py* : Used in the examples above.
 - *setup.sh* : Bash script that we will use to deploy the module. This script uses the `gcloud` and `bq` [command line tools](https://mwvgroup.github.io/pittgoogle-client/overview/adv-setup.html#command-line).
