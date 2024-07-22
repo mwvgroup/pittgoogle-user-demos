@@ -23,3 +23,5 @@ Skip the "Optional" steps for now; you will be directed to complete them at the 
 ## Tutorials
 
 - [Cloud Run](cloud-run/README.md)
+- [Pub/Sub](pubsub/README.md)
+- [ZTF Figures](other-examples/ztf-figures.rst)
