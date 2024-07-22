@@ -10,8 +10,6 @@ Concepts include:
 
 - Basic access to data in
     - Pub/Sub : Real-time alert streams. Accessible from almost anywhere. Well-integrated with other Cloud data storage and compute services.
-    - BigQuery : Tabular data. SQL accessible. Accepts streaming inserts.
-    - Cloud Storage : Buckets holding alert packets in Avro format.
 - Process Live Alert Streams
     - Cloud Run : Compute service. Use this to process an alert stream in real time.
 
