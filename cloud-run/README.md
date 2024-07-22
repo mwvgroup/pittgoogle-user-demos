@@ -207,15 +207,15 @@ You should be sure to test the code locally before doing this (see previous exam
 This example uses the `alert` obtained in Example 1 and the pre-written code in the [SuperNNova directory](tutorial/SuperNNova) that is included in this repo.
 The code includes the following notable files:
 
-[TODO]
+<!-- [TODO]
 - link to files
 - add a summary doc for the deployment files
-- Explain that it's best if the classifier code you want to run is published to pypi.
+- Explain that it's best if the classifier code you want to run is published to pypi. -->
 
 - *main.py* : Used in the examples above.
 - *setup.sh* : Bash script that we will use to deploy the module. This script uses the `gcloud` and `bq` [command line tools](https://mwvgroup.github.io/pittgoogle-client/overview/adv-setup.html#command-line).
 - *Dockerfile* : Defines the container environment that main.py will run in.
-- *cloudbuild.yaml* : Instructions that will be used by Cloud Build to build the container and deploy it to Cloud Run.  # [TODO] Move stuff out of setup.sh to this file.
+- *cloudbuild.yaml* : Instructions that will be used by Cloud Build to build the container and deploy it to Cloud Run.
 
 See the comments in individual files for more instructions on creating them.
 
