@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 
-"""This module filters the LSST alert stream to discover never-before-seen transients."""
+"""This module filters the LSST alert stream to discover intra/inter-night-confirmed never-before-seen non-ssObject transients."""
 
 import os
 import astropy.time
@@ -51,8 +51,8 @@ def run():
 
 
 def filter_alert(alert: pittgoogle.Alert):
-    """Filters the LSST alert stream to identify intra/inter-night confirmed never-before-seen non-ssObject transients.
-    Discoveries are published to a Pub/Sub topic.
+    """Filters the LSST alert stream to identify intra/inter-night-confirmed never-before-seen non-ssObject transients.
+    Discoveries are published to the appropriate Pub/Sub topic.
     """
     # [FIXME] assumes alert.get("ssobjectid") method implemented; need to add ssObjectId to lsst.yml
     if len(alert.get("prv_sources")) == 1 and not alert.get("ssobjectid"):
@@ -61,7 +61,7 @@ def filter_alert(alert: pittgoogle.Alert):
 
 
 def publish_discovery(alert: pittgoogle.Alert):
-    """Determines the type of detection (intra or inter night) and publishes the discovery to the appropriate topic."""
+    """Determines the type of detection (intra-night or inter-night) and publishes the discovery to the appropriate topic."""
     detection_date, prv_detection_date = calculate_detection_dates(alert)
     if detection_date == prv_detection_date:
         TOPIC_INTRA_NIGHT_DISCOVERIES.publish(create_outgoing_alert(alert))
