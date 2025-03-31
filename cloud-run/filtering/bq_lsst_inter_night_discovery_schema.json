@@ -1,0 +1,32 @@
+[
+    {
+      "description": "Id of the diaObject this source was associated with.",
+      "mode": "REQUIRED",
+      "name": "diaObjectId",
+      "type": "INTEGER"
+    },
+    {
+      "description": "Right ascension coordinate of the center of the latest diaSource.",
+      "mode": "REQUIRED",
+      "name": "ra",
+      "type": "INTFLOATEGER"
+    },
+    {
+      "description": "Declination coordinate of the center of the latest diaSource.",
+      "mode": "REQUIRED",
+      "name": "dec",
+      "type": "FLOAT"
+    },
+    {
+      "description": "Effective mid-visit time for the initial diaSource, expressed as Modified Julian Date, International Atomic Time.",
+      "mode": "REQUIRED",
+      "name": "initialMidpointMjdTai",
+      "type": "FLOAT"
+    },
+    {
+      "description": "Effective mid-visit time for the latest diaSource, expressed as Modified Julian Date, International Atomic Time.",
+      "mode": "REQUIRED",
+      "name": "latestMidpointMjdTai",
+      "type": "FLOAT"
+    }
+  ]

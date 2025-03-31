@@ -4,6 +4,7 @@
 """This module filters the LSST alert stream to discover never-before-seen transients."""
 
 import os
+import astropy.time
 import flask
 import pittgoogle
 
@@ -19,8 +20,11 @@ ROUTE_RUN = "/"  # HTTP route that will trigger run(). Must match setup.sh
 # Variables for outgoing data
 HTTP_204 = 204  # HTTP code: Success
 HTTP_400 = 400  # HTTP code: Bad Request
-TOPIC_FIRST_DETECTION = pittgoogle.Topic.from_cloud(
-    "first-detection", survey=SURVEY, testid=TESTID, projectid=PROJECT_ID
+TOPIC_INTRA_NIGHT_DISCOVERIES = pittgoogle.Topic.from_cloud(
+    "intra-night-discoveries", survey=SURVEY, testid=TESTID, projectid=PROJECT_ID
+)
+TOPIC_INTER_NIGHT_DISCOVERIES = pittgoogle.Topic.from_cloud(
+    "inter-night-discoveries", survey=SURVEY, testid=TESTID, projectid=PROJECT_ID
 )
 
 app = flask.Flask(__name__)
@@ -47,12 +51,33 @@ def run():
 
 
 def filter_alert(alert: pittgoogle.Alert):
-    """Filters the LSST alert stream to identify never-before-seen non-ssObject transients.
+    """Filters the LSST alert stream to identify intra/inter-night confirmed never-before-seen non-ssObject transients.
     Discoveries are published to a Pub/Sub topic.
     """
-    if not alert.get("ssobjectid") and not alert.get("prv_sources"):
-        TOPIC_FIRST_DETECTION.publish(create_outgoing_alert(alert), serializer="json")
+    # [FIXME] assumes alert.get("ssobjectid") method implemented; need to add ssObjectId to lsst.yml
+    if len(alert.get("prv_sources")) == 1 and not alert.get("ssobjectid"):
+        publish_discovery(alert)
     return "", HTTP_204
+
+
+def publish_discovery(alert: pittgoogle.Alert):
+    """Determines the type of detection (intra or inter night) and publishes the discovery to the appropriate topic."""
+    detection_date, prv_detection_date = calculate_detection_dates(alert)
+    if detection_date == prv_detection_date:
+        TOPIC_INTRA_NIGHT_DISCOVERIES.publish(create_outgoing_alert(alert))
+    else:
+        TOPIC_INTER_NIGHT_DISCOVERIES.publish(create_outgoing_alert(alert))
+
+
+def calculate_detection_dates(alert: pittgoogle.Alert):
+    detection_date = astropy.time.Time(alert.get("mjd"), format="mjd").datetime.strftime(
+        "%Y-%m-%d"
+    )
+    prv_detection_date = astropy.time.Time(
+        alert.dict["prvDiaSources"][0]["midpointMjdTai"], format="mjd"
+    ).datetime.strftime("%Y-%m-%d")
+
+    return detection_date, prv_detection_date
 
 
 def create_outgoing_alert(alert: pittgoogle.Alert) -> pittgoogle.Alert:
@@ -61,7 +86,8 @@ def create_outgoing_alert(alert: pittgoogle.Alert) -> pittgoogle.Alert:
         alert.get_key("objectid"): alert.get("objectid"),
         alert.get_key("ra"): alert.get("ra"),
         alert.get_key("dec"): alert.get("dec"),
-        alert.get_key("mjd"): alert.get("mjd"),
+        "initialMidpointMjdTai": alert.dict["prvDiaSources"][0]["midpointMjdTai"],
+        "latestMidpointMjdTai": alert.get("mjd"),
     }
-    attrs = {"first_detection": "True"}
-    return pittgoogle.alert.Alert(outgoing_msg, attributes=attrs)
+
+    return pittgoogle.alert.Alert(outgoing_msg)
