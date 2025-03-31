@@ -62,14 +62,14 @@ def filter_alert(alert: pittgoogle.Alert):
 
 def publish_discovery(alert: pittgoogle.Alert):
     """Determines the type of detection (intra-night or inter-night) and publishes the discovery to the appropriate topic."""
-    detection_date, prv_detection_date = calculate_detection_dates(alert)
+    detection_date, prv_detection_date = _calculate_detection_dates(alert)
     if detection_date == prv_detection_date:
-        TOPIC_INTRA_NIGHT_DISCOVERIES.publish(create_outgoing_alert(alert))
+        TOPIC_INTRA_NIGHT_DISCOVERIES.publish(_create_outgoing_alert(alert))
     else:
-        TOPIC_INTER_NIGHT_DISCOVERIES.publish(create_outgoing_alert(alert))
+        TOPIC_INTER_NIGHT_DISCOVERIES.publish(_create_outgoing_alert(alert))
 
 
-def calculate_detection_dates(alert: pittgoogle.Alert):
+def _calculate_detection_dates(alert: pittgoogle.Alert):
     detection_date = astropy.time.Time(alert.get("mjd"), format="mjd").datetime.strftime(
         "%Y-%m-%d"
     )
@@ -80,7 +80,7 @@ def calculate_detection_dates(alert: pittgoogle.Alert):
     return detection_date, prv_detection_date
 
 
-def create_outgoing_alert(alert: pittgoogle.Alert) -> pittgoogle.Alert:
+def _create_outgoing_alert(alert: pittgoogle.Alert) -> pittgoogle.Alert:
     """Creates a new Alert object."""
     outgoing_msg = {
         alert.get_key("objectid"): alert.get("objectid"),
