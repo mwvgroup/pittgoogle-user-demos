@@ -42,11 +42,14 @@ def run():
     # extract the envelope from the request that triggered the endpoint
     # this contains a single Pub/Sub message with the alert to be processed
     envelope = flask.request.get_json()
+
+    # unpack the alert. raises a `BadRequest` if the envelope does not contain a valid message
     try:
         alert = pittgoogle.Alert.from_cloud_run(envelope, "lsst")
     except pittgoogle.exceptions.BadRequest as exc:
         return str(exc), HTTP_400
 
+    # filter
     filter_alert(alert)
 
 
@@ -55,29 +58,31 @@ def filter_alert(alert: pittgoogle.Alert):
     Discoveries are published to the appropriate Pub/Sub topic.
     """
     # [FIXME] assumes alert.get("ssobjectid") method implemented; need to add ssObjectId to lsst.yml
+    # ensure the source is not associated with a solar system object and the number of detections
+    # is equal to 2
     if len(alert.get("prv_sources")) == 1 and not alert.get("ssobjectid"):
+        # determine if the discovery is intra-night or inter-night and publish result
         publish_discovery(alert)
     return "", HTTP_204
 
 
 def publish_discovery(alert: pittgoogle.Alert):
     """Determines the type of detection (intra-night or inter-night) and publishes the discovery to the appropriate topic."""
-    detection_date, prv_detection_date = _calculate_detection_dates(alert)
-    if detection_date == prv_detection_date:
+    # convert MJD values to datetime strings and compare them
+    initial_mjd, latest_mjd = _mjd_to_datetime(alert)
+    if initial_mjd == latest_mjd:
         TOPIC_INTRA_NIGHT_DISCOVERIES.publish(_create_outgoing_alert(alert))
     else:
         TOPIC_INTER_NIGHT_DISCOVERIES.publish(_create_outgoing_alert(alert))
 
 
-def _calculate_detection_dates(alert: pittgoogle.Alert):
-    detection_date = astropy.time.Time(alert.get("mjd"), format="mjd").datetime.strftime(
-        "%Y-%m-%d"
-    )
-    prv_detection_date = astropy.time.Time(
+def _mjd_to_datetime(alert: pittgoogle.Alert):
+    """Converts MJD values to datetime strings and formats them as YYYY-MM-DD."""
+    initial_mjd = astropy.time.Time(
         alert.dict["prvDiaSources"][0]["midpointMjdTai"], format="mjd"
     ).datetime.strftime("%Y-%m-%d")
-
-    return detection_date, prv_detection_date
+    latest_mjd = astropy.time.Time(alert.get("mjd"), format="mjd").datetime.strftime("%Y-%m-%d")
+    return initial_mjd, latest_mjd
 
 
 def _create_outgoing_alert(alert: pittgoogle.Alert) -> pittgoogle.Alert:

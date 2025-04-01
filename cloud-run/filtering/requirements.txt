@@ -1,3 +1,4 @@
+astropy
 google-cloud-functions
 google-cloud-logging
 pittgoogle-client>=0.3.12
