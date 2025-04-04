@@ -57,16 +57,14 @@ def filter_alert(alert: pittgoogle.Alert):
     """Filters the LSST alert stream to identify intra/inter-night-confirmed never-before-seen non-ssObject transients.
     Discoveries are published to the appropriate Pub/Sub topic.
     """
-    # [FIXME] assumes alert.get("ssobjectid") method implemented; need to add ssObjectId to lsst.yml
-    # ensure the source is not associated with a solar system object and the number of detections
-    # is equal to 2
+    # ensure the source is not associated with a solar system object and the number of detections is equal to 2
     if len(alert.get("prv_sources")) == 1 and not alert.get("ssobjectid"):
         # determine if the discovery is intra-night or inter-night and publish result
-        publish_discovery(alert)
+        analyze_and_publish(alert)
     return "", HTTP_204
 
 
-def publish_discovery(alert: pittgoogle.Alert):
+def analyze_and_publish(alert: pittgoogle.Alert):
     """Determines the type of detection (intra-night or inter-night) and publishes the discovery to the appropriate topic."""
     # convert MJD values to datetime strings and compare them
     initial_mjd, latest_mjd = _mjd_to_datetime(alert)
