@@ -50,7 +50,7 @@ def run():
         return str(exc), HTTP_400
 
     # filter
-    filter_alert(alert)
+    return filter_alert(alert)
 
 
 def filter_alert(alert: pittgoogle.Alert):
@@ -71,12 +71,14 @@ def publish_discovery(alert: pittgoogle.Alert):
     # convert MJD values to datetime strings and compare them
     initial_mjd, latest_mjd = _mjd_to_datetime(alert)
     if initial_mjd == latest_mjd:
-        TOPIC_INTRA_NIGHT_DISCOVERIES.publish(_create_outgoing_alert(alert))
+        result = _your_analysis(alert)
+        TOPIC_INTRA_NIGHT_DISCOVERIES.publish(_create_outgoing_alert(result))
     else:
-        TOPIC_INTER_NIGHT_DISCOVERIES.publish(_create_outgoing_alert(alert))
+        result = _your_analysis(alert)
+        TOPIC_INTER_NIGHT_DISCOVERIES.publish(_create_outgoing_alert(result))
 
 
-def _mjd_to_datetime(alert: pittgoogle.Alert):
+def _mjd_to_datetime(alert: pittgoogle.Alert) -> str:
     """Converts MJD values to datetime strings and formats them as YYYY-MM-DD."""
     initial_mjd = astropy.time.Time(
         alert.dict["prvDiaSources"][0]["midpointMjdTai"], format="mjd"
@@ -94,5 +96,9 @@ def _create_outgoing_alert(alert: pittgoogle.Alert) -> pittgoogle.Alert:
         "initialMidpointMjdTai": alert.dict["prvDiaSources"][0]["midpointMjdTai"],
         "latestMidpointMjdTai": alert.get("mjd"),
     }
-
     return pittgoogle.alert.Alert(outgoing_msg)
+
+
+def _your_analysis(alert: pittgoogle.Alert):
+    """Your analysis code goes here."""
+    return alert
