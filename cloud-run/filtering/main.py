@@ -57,12 +57,11 @@ def run():
 
 
 def filter_alert(alert: pittgoogle.Alert):
-    """Filters the incoming LSST alert stream to identify intra-night-confirmed never-before-seen non-ssObject transients.
+    """Filters the incoming LSST alert stream to identify intra/inter-night-confirmed never-before-seen non-ssObject transients.
     Discoveries are published to a Pub/Sub topic.
     """
-    # determine boolean flags
     is_intra_night_discovery = _is_intra_night_discovery(alert)
-    is_candidate = _satisfies_requirements(alert)
+    is_candidate = _satisfies_candidate_requirements(alert)
 
     if alert.n_previous_detections == "1" and is_candidate and is_intra_night_discovery:
         TOPIC_INTRA_NIGHT_DISCOVERIES.publish(alert)
@@ -72,9 +71,7 @@ def filter_alert(alert: pittgoogle.Alert):
 
 
 def _is_intra_night_discovery(alert: pittgoogle.Alert) -> bool:
-    """
-    Determines if the detection is an intra-night discovery.
-    """
+    """Determines if the detection is an intra-night discovery."""
     # convert MJD floats to datetime strings and compare them
     initial_mjd, latest_mjd = _mjds_to_datetime_strs(alert)
     if initial_mjd == latest_mjd:
@@ -91,18 +88,18 @@ def _mjds_to_datetime_strs(alert: pittgoogle.Alert) -> str:
     return initial_mjd, latest_mjd
 
 
-def _satisfies_requirements(alert: pittgoogle.Alert) -> bool:
-    """Determines if the intra-night discovery meets additional requirements sought by this module."""
+def _satisfies_candidate_requirements(alert: pittgoogle.Alert) -> bool:
+    """Determines if the discovery meets additional requirements sought by this module."""
     in_same_position = _is_within_positional_uncertainty(alert)
-    is_same_object = _xmatch_for_previous_detections(alert)
+    is_new_object = _xmatch_for_previous_detections(alert)
 
-    if in_same_position and is_same_object:
+    if in_same_position and is_new_object:
         return True
     return False
 
 
 def _is_within_positional_uncertainty(alert: pittgoogle.Alert) -> bool:
-    """Determines if the intra-night discovery is within the positional uncertainty of the previous detection."""
+    """Determines if the discovery is within the positional uncertainty of the initial detection."""
     # get positions and uncertainties
     ra, dec = alert.ra, alert.dec
     prev_ra, prev_dec = alert.get("prv_sources")[0]["ra"], alert.get("prv_sources")[0]["dec"]
@@ -113,9 +110,9 @@ def _is_within_positional_uncertainty(alert: pittgoogle.Alert) -> bool:
     )
 
     # compute angular separation in arcseconds
-    position = SkyCoord(ra=ra * u.deg, dec=dec * u.deg)
-    prev_position = SkyCoord(ra=prev_ra * u.deg, dec=prev_dec * u.deg)
-    separation = position.separation(prev_position).arcsec
+    current_position = SkyCoord(ra=ra * u.deg, dec=dec * u.deg)
+    initial_position = SkyCoord(ra=prev_ra * u.deg, dec=prev_dec * u.deg)
+    separation = current_position.separation(initial_position).arcsec
 
     # determine if the separation is within the positional uncertainty
     positional_uncertainty = np.sqrt(ra_err**2 + dec_err**2 + prev_ra_err**2 + prev_dec_err**2)
