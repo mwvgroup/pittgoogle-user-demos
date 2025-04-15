@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 
-"""This module filters the LSST alert stream to discover intra/inter-night-confirmed never-before-seen non-ssObject transients."""
+"""This module filters the LSST alert stream to discover intra-night-confirmed never-before-seen non-ssObject transients."""
 
 import os
+import numpy as np
+from astropy.coordinates import SkyCoord
 import astropy.time
+import astropy.units as u
 import flask
 import pittgoogle
 
@@ -32,7 +35,7 @@ app = flask.Flask(__name__)
 
 @app.route(ROUTE_RUN, methods=["POST"])
 def run():
-    """Processes full LSST alert stream.
+    """Processes the LSST alert stream filtered by the Pub/Sub subscription that triggers this module.
 
     This module is intended to be deployed as a Cloud Run service. It will operate as an HTTP endpoint
     triggered by Pub/Sub messages. This function will be called once for every message sent to this route.
@@ -45,7 +48,7 @@ def run():
 
     # unpack the alert. raises a `BadRequest` if the envelope does not contain a valid message
     try:
-        alert = pittgoogle.Alert.from_cloud_run(envelope, "lsst")
+        alert = pittgoogle.Alert.from_cloud_run(envelope, f"{SURVEY}")
     except pittgoogle.exceptions.BadRequest as exc:
         return str(exc), HTTP_400
 
@@ -54,29 +57,32 @@ def run():
 
 
 def filter_alert(alert: pittgoogle.Alert):
-    """Filters the LSST alert stream to identify intra/inter-night-confirmed never-before-seen non-ssObject transients.
-    Discoveries are published to the appropriate Pub/Sub topic.
+    """Filters the incoming LSST alert stream to identify intra-night-confirmed never-before-seen non-ssObject transients.
+    Discoveries are published to a Pub/Sub topic.
     """
-    # ensure the source is not associated with a solar system object and the number of detections is equal to 2
-    if len(alert.get("prv_sources")) == 1 and not alert.get("ssobjectid"):
-        # determine if the discovery is intra-night or inter-night and publish result
-        analyze_and_publish(alert)
+    # determine boolean flags
+    is_intra_night_discovery = _is_intra_night_discovery(alert)
+    is_candidate = _satisfies_requirements(alert)
+
+    if alert.n_previous_detections == "1" and is_candidate and is_intra_night_discovery:
+        TOPIC_INTRA_NIGHT_DISCOVERIES.publish(alert)
+    elif is_candidate and not is_intra_night_discovery:
+        TOPIC_INTER_NIGHT_DISCOVERIES.publish(alert)
     return "", HTTP_204
 
 
-def analyze_and_publish(alert: pittgoogle.Alert):
-    """Determines the type of detection (intra-night or inter-night) and publishes the discovery to the appropriate topic."""
-    # convert MJD values to datetime strings and compare them
-    initial_mjd, latest_mjd = _mjd_to_datetime(alert)
+def _is_intra_night_discovery(alert: pittgoogle.Alert) -> bool:
+    """
+    Determines if the detection is an intra-night discovery.
+    """
+    # convert MJD floats to datetime strings and compare them
+    initial_mjd, latest_mjd = _mjds_to_datetime_strs(alert)
     if initial_mjd == latest_mjd:
-        result = _your_analysis(alert)
-        TOPIC_INTRA_NIGHT_DISCOVERIES.publish(_create_outgoing_alert(result))
-    else:
-        result = _your_analysis(alert)
-        TOPIC_INTER_NIGHT_DISCOVERIES.publish(_create_outgoing_alert(result))
+        return True
+    return False
 
 
-def _mjd_to_datetime(alert: pittgoogle.Alert) -> str:
+def _mjds_to_datetime_strs(alert: pittgoogle.Alert) -> str:
     """Converts MJD values to datetime strings and formats them as YYYY-MM-DD."""
     initial_mjd = astropy.time.Time(
         alert.dict["prvDiaSources"][0]["midpointMjdTai"], format="mjd"
@@ -85,18 +91,38 @@ def _mjd_to_datetime(alert: pittgoogle.Alert) -> str:
     return initial_mjd, latest_mjd
 
 
-def _create_outgoing_alert(alert: pittgoogle.Alert) -> pittgoogle.Alert:
-    """Creates a new Alert object."""
-    outgoing_msg = {
-        alert.get_key("objectid"): alert.get("objectid"),
-        alert.get_key("ra"): alert.get("ra"),
-        alert.get_key("dec"): alert.get("dec"),
-        "initialMidpointMjdTai": alert.dict["prvDiaSources"][0]["midpointMjdTai"],
-        "latestMidpointMjdTai": alert.get("mjd"),
-    }
-    return pittgoogle.alert.Alert(outgoing_msg)
+def _satisfies_requirements(alert: pittgoogle.Alert) -> bool:
+    """Determines if the intra-night discovery meets additional requirements sought by this module."""
+    in_same_position = _is_within_positional_uncertainty(alert)
+    is_same_object = _xmatch_for_previous_detections(alert)
+
+    if in_same_position and is_same_object:
+        return True
+    return False
 
 
-def _your_analysis(alert: pittgoogle.Alert):
-    """Your analysis code goes here."""
-    return alert
+def _is_within_positional_uncertainty(alert: pittgoogle.Alert) -> bool:
+    """Determines if the intra-night discovery is within the positional uncertainty of the previous detection."""
+    # get positions and uncertainties
+    ra, dec = alert.ra, alert.dec
+    prev_ra, prev_dec = alert.get("prv_sources")[0]["ra"], alert.get("prv_sources")[0]["dec"]
+    ra_err, dec_err = alert.get("ra_err"), alert.get("dec_err")
+    prev_ra_err, prev_dec_err = (
+        alert.get("prv_sources")[0]["raErr"],
+        alert.get("prv_sources")[0]["decErr"],
+    )
+
+    # compute angular separation in arcseconds
+    position = SkyCoord(ra=ra * u.deg, dec=dec * u.deg)
+    prev_position = SkyCoord(ra=prev_ra * u.deg, dec=prev_dec * u.deg)
+    separation = position.separation(prev_position).arcsec
+
+    # determine if the separation is within the positional uncertainty
+    positional_uncertainty = np.sqrt(ra_err**2 + dec_err**2 + prev_ra_err**2 + prev_dec_err**2)
+    if separation <= 3 * positional_uncertainty:
+        return True
+    return False
+
+
+def _xmatch_for_previous_detections(alert) -> bool:
+    return False

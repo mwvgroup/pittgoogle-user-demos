@@ -147,6 +147,7 @@ echo "Creating trigger subscription for Cloud Run..."
 # retry indefinitely, until the message is deleted manually.
 gcloud pubsub subscriptions create "${ps_input_subscrip}" \
     --topic "${trigger_topic}" \
+    --message-filter='attributes.ssobjectid = "" AND (attributes.n_previous_detections = "1" OR attributes.n_previous_detections = "2")' \
     --topic-project "${PITTGOOGLE_PROJECT_ID}" \
     --ack-deadline=600 \
     --push-endpoint="${url}${ROUTE_RUN}" \
