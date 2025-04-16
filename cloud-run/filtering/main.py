@@ -61,31 +61,46 @@ def filter_alert(alert: pittgoogle.Alert):
     Discoveries are published to a Pub/Sub topic.
     """
     is_intra_night_discovery = _is_intra_night_discovery(alert)
+    is_inter_night_discovery = _is_inter_night_discovery(alert)
     is_candidate = _satisfies_candidate_requirements(alert)
 
-    if alert.n_previous_detections == "1" and is_candidate and is_intra_night_discovery:
+    if is_intra_night_discovery and is_candidate:
         TOPIC_INTRA_NIGHT_DISCOVERIES.publish(alert)
-    elif is_candidate and not is_intra_night_discovery:
+    elif is_inter_night_discovery and is_candidate:
         TOPIC_INTER_NIGHT_DISCOVERIES.publish(alert)
     return "", HTTP_204
 
 
 def _is_intra_night_discovery(alert: pittgoogle.Alert) -> bool:
     """Determines if the detection is an intra-night discovery."""
+    if alert.n_previous_detections != "1":
+        return False
+
     # convert MJD floats to datetime strings and compare them
-    initial_mjd, latest_mjd = _mjds_to_datetime_strs(alert)
-    if initial_mjd == latest_mjd:
+    prv_mjds, latest_mjd = _mjds_to_datetime_strs(alert)
+    return prv_mjds[0] == latest_mjd
+
+
+def _is_inter_night_discovery(alert: pittgoogle.Alert) -> bool:
+    """Determines if the detection is an inter-night discovery."""
+    if alert.n_previous_detections != "2":
+        return False
+
+    # convert MJD floats to datetime strings and compare them
+    prv_mjds, latest_mjd = _mjds_to_datetime_strs(alert)
+    if len(set(prv_mjds)) == 1 and prv_mjds[0] != latest_mjd:
         return True
     return False
 
 
-def _mjds_to_datetime_strs(alert: pittgoogle.Alert) -> str:
+def _mjds_to_datetime_strs(alert: pittgoogle.Alert) -> tuple[list[str], str]:
     """Converts MJD values to datetime strings and formats them as YYYY-MM-DD."""
-    initial_mjd = astropy.time.Time(
-        alert.dict["prvDiaSources"][0]["midpointMjdTai"], format="mjd"
-    ).datetime.strftime("%Y-%m-%d")
+    previous_mjd = [
+        astropy.time.Time(source["midpointMjdTai"], format="mjd").datetime.strftime("%Y-%m-%d")
+        for source in alert.get("prv_sources")
+    ]
     latest_mjd = astropy.time.Time(alert.get("mjd"), format="mjd").datetime.strftime("%Y-%m-%d")
-    return initial_mjd, latest_mjd
+    return previous_mjd, latest_mjd
 
 
 def _satisfies_candidate_requirements(alert: pittgoogle.Alert) -> bool:
@@ -93,15 +108,13 @@ def _satisfies_candidate_requirements(alert: pittgoogle.Alert) -> bool:
     in_same_position = _is_within_positional_uncertainty(alert)
     is_new_object = _xmatch_for_previous_detections(alert)
 
-    if in_same_position and is_new_object:
-        return True
-    return False
+    return in_same_position and is_new_object
 
 
 def _is_within_positional_uncertainty(alert: pittgoogle.Alert) -> bool:
-    """Determines if the discovery is within the positional uncertainty of the initial detection."""
+    """Determines if the current diaSource is within the positional uncertainty of the initially detected diaSource."""
     # get positions and uncertainties
-    ra, dec = alert.ra, alert.dec
+    ra, dec = alert.get("ra"), alert.get("dec")
     prev_ra, prev_dec = alert.get("prv_sources")[0]["ra"], alert.get("prv_sources")[0]["dec"]
     ra_err, dec_err = alert.get("ra_err"), alert.get("dec_err")
     prev_ra_err, prev_dec_err = (
