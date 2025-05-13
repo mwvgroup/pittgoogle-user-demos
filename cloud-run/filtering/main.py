@@ -112,7 +112,7 @@ def _mjds_to_datetime_strs(alert: pittgoogle.Alert) -> tuple[list[str], str]:
     return previous_mjd, latest_mjd
 
 
-def _is_candidate(alert):
+def _is_candidate(alert: pittgoogle.Alert) -> bool:
     # define configs
     configs = {
         "sigma_clipping_kwargs": {"sigma": 3, "maxiters": 10},
@@ -149,8 +149,7 @@ def _read_stamp_data(cutout):
 def _run_hostless_detection_with_clipped_data(
     science_stamp: np.ndarray, template_stamp: np.ndarray, configs: Dict
 ) -> bool:
-    """
-    Adapted from:
+    """Adapted from:
     https://github.com/COINtoolbox/extragalactic_hostless/blob/main/src/pipeline_utils.py#L271
 
     Detects potential hostless candidates with sigma clipped stamp images by cropping an image patch from the center of
@@ -182,8 +181,7 @@ def _run_hostless_detection_with_clipped_data(
 
 
 def _crop_center_patch(input_image: np.ndarray, patch_radius: int = 12) -> np.ndarray:
-    """
-    Adapted from:
+    """Adapted from:
     https://github.com/COINtoolbox/extragalactic_hostless/blob/main/src/pipeline_utils.py#L234
 
     Crops rectangular patch around image center with a given patch scale.
@@ -201,9 +199,8 @@ def _crop_center_patch(input_image: np.ndarray, patch_radius: int = 12) -> np.nd
 
 def _check_hostless_conditions(
     science_clipped: np.ndarray, template_clipped: np.ndarray, detection_config: Dict
-):
-    """
-    Adapted from:
+) -> bool:
+    """Adapted from:
     https://github.com/COINtoolbox/extragalactic_hostless/blob/main/src/pipeline_utils.py#L253
     """
 
