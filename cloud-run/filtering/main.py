@@ -150,20 +150,12 @@ def _run_hostless_detection_with_clipped_data(
     science_stamp: np.ndarray, template_stamp: np.ndarray, configs: Dict
 ) -> bool:
     """
+    Adapted from:
+    https://github.com/COINtoolbox/extragalactic_hostless/blob/main/src/pipeline_utils.py#L271
+
     Detects potential hostless candidates with sigma clipped stamp images by cropping an image patch from the center of
     the image. If pixels are rejected in scientific image but not in corresponding template image, such candidates are
     flagged as potential hostless.
-
-    Parameters
-    ----------
-    science_stamp
-       science image
-    template_stamp
-        template image
-    detection_configs
-        configs with detection threshold
-    image_shape
-        image shape
     """
 
     science_clipped = sigma_clip(science_stamp, **configs["sigma_clipping_kwargs"])
@@ -189,16 +181,12 @@ def _run_hostless_detection_with_clipped_data(
     return is_hostless_candidate
 
 
-def _crop_center_patch(input_image: np.ndarray, patch_radius: int = 7) -> np.ndarray:
+def _crop_center_patch(input_image: np.ndarray, patch_radius: int = 12) -> np.ndarray:
     """
-    Crops rectangular patch around image center with a given patch scale.
+    Adapted from:
+    https://github.com/COINtoolbox/extragalactic_hostless/blob/main/src/pipeline_utils.py#L234
 
-    Parameters
-    ----------
-    input_image
-       input image
-    patch_radius
-        patch radius in pixels
+    Crops rectangular patch around image center with a given patch scale.
     """
     image_shape = input_image.shape[0:2]
     center_coords = [image_shape[0] / 2, image_shape[1] / 2]
@@ -214,6 +202,10 @@ def _crop_center_patch(input_image: np.ndarray, patch_radius: int = 7) -> np.nda
 def _check_hostless_conditions(
     science_clipped: np.ndarray, template_clipped: np.ndarray, detection_config: Dict
 ):
+    """
+    Adapted from:
+    https://github.com/COINtoolbox/extragalactic_hostless/blob/main/src/pipeline_utils.py#L253
+    """
 
     science_only_detection = (
         np.ma.count_masked(science_clipped) > detection_config["max_number_of_pixels_clipped"]
