@@ -7,7 +7,7 @@
 
 **Prerequisites**
 
-- Complete the [One-Time Setup for Cloud Run](tutorial/cloud-run/one-time-setup-for-cloud-run.md).
+- Complete the [One-Time Setup for Cloud Run](one-time-setup-for-cloud-run.md).
 
 ## Introduction
 
@@ -92,7 +92,7 @@ alert = subscrip_in.pull_batch(max_messages=1)[0]
 ## Example 2: Write code to classify a single alert
 
 This example shows how to develop code to classify an alert.
-It uses the `alert` obtained in Example 1 and the pre-written code in the SuperNNova module's [main.py](tutorial/SuperNNova/main.py) file.
+It uses the `alert` obtained in Example 1 and the pre-written code in the SuperNNova module's [main.py](SuperNNova/main.py) file.
 
 Everything in this section can be done locally; no cloud resources required.
 
