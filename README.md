@@ -16,7 +16,7 @@ Concepts include:
 ## Setup
 
 At a minimum, you will need to install the `pittgoogle-client` package and obtain/configure credentials for a Google Cloud project.
-If this is your first time, please follow the [one-time setup](https://mwvgroup.github.io/pittgoogle-client/one-time-setup.html) instructions.
+If this is your first time, please follow the [one-time setup](https://mwvgroup.github.io/pittgoogle-client/one-time-setup/index.html) instructions.
 The process is very similar to that of other Alert Brokers except that here you will obtain authentication through Google Cloud, not through Pitt-Google Broker.
 Skip the "Optional" steps for now; you will be directed to complete them at the beginning of a tutorial if needed.
 
