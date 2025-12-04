@@ -70,7 +70,7 @@ JavaScript UDFs are a type of Single Message Transform (SMT). UDFs attached to a
 
 ```python
 # Topic that the subscription should be connected to
-topic = pittgoogle.Topic(name="lsst-loop", projectid=pittgoogle.ProjectIds().pittgoogle)
+topic = pittgoogle.Topic(name="lsst-alerts-simulated", projectid=pittgoogle.ProjectIds().pittgoogle)
 
 # objects with <=20 previous detections are filtered out
 _smt_javascript_udf = '''
