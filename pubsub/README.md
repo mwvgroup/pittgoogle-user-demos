@@ -50,7 +50,7 @@ Pub/Sub message attributes are strings (default), using this filtering method is
 
 ```python
 # Topic that the subscription should be connected to
-topic = pittgoogle.Topic(name="lsst-alerts-simulated", projectid=pittgoogle.ProjectIds().pittgoogle)
+topic = pittgoogle.Topic(name="lsst-alerts", projectid="pitt-alert-broker")
 
 # messages without this attribute key are filtered out
 # (e.g., sources associated with solar system objects would not have this key)
@@ -70,7 +70,7 @@ JavaScript UDFs are a type of Single Message Transform (SMT). UDFs attached to a
 
 ```python
 # Topic that the subscription should be connected to
-topic = pittgoogle.Topic(name="lsst-alerts-simulated", projectid=pittgoogle.ProjectIds().pittgoogle)
+topic = pittgoogle.Topic(name="lsst-alerts", projectid="pitt-alert-broker")
 
 # objects with <=20 previous detections are filtered out
 _smt_javascript_udf = '''
@@ -92,3 +92,5 @@ subscription.touch(smt_javascript_udf=_smt_javascript_udf)
 
 Pub/Sub enforces resource limits on UDFs to ensure efficient transformation operations. Please visit the
 [documentation](https://docs.cloud.google.com/pubsub/docs/smts/udfs-overview#limitations) for additional details.
+
+## Watchlists
