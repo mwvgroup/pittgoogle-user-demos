@@ -92,5 +92,3 @@ subscription.touch(smt_javascript_udf=_smt_javascript_udf)
 
 Pub/Sub enforces resource limits on UDFs to ensure efficient transformation operations. Please visit the
 [documentation](https://docs.cloud.google.com/pubsub/docs/smts/udfs-overview#limitations) for additional details.
-
-## Watchlists
