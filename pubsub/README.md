@@ -52,6 +52,15 @@ Attribute filters use Pub/Sub's built-in subscription
 [filtering syntax](https://docs.cloud.google.com/pubsub/docs/subscription-message-filter#filtering_syntax). Because
 Pub/Sub message attributes are strings (default), using this filtering method is recommended when the filtering logic is simple.
 
+Alerts from different streams will have different attributes available.
+If you pulled an alert from the loop subscription created above, you can see the attributes by doing:
+
+```python
+alert.attributes
+```
+
+Now let's create a subscription to the full alerts topic with an attribute filter attached.
+
 ```python
 # Topic that the subscription should be connected to
 topic = pittgoogle.Topic(name="lsst-alerts", projectid="pitt-alert-broker")
