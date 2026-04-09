@@ -21,12 +21,16 @@ To listen to an alert stream served by Pitt-Google, you will need to create a su
 Google Cloud project that is attached to a topic in Pitt-Google's project.
 
 ```python
-ztopic = pittgoogle.Topic("ztf-loop", projectid=pittgoogle.ProjectIds().pittgoogle)
-zloop = pittgoogle.Subscription("ztf-loop", schema_name="ztf", topic=ztopic)
+# This topic publishes LSST alerts at a rate of 1 per second and is good for testing.
+loop_topic = pittgoogle.Topic(name="lsst-loop", projectid="pitt-alert-broker")
+
 # This will create a subscription in your Google Cloud project if it doesn't already exist.
-zloop.touch()
-zalert = zloop.pull_batch(max_messages=1)[0]
-zalert.dataframe
+loop_subscription = pittgoogle.Subscription(name="lsst-loop", schema_name="lsst", topic=loop_topic)
+loop_subscription.touch()
+
+# Pull one alert from your subscription and display the Pandas DataFrame.
+alert = loop_subscription.pull_batch(max_messages=1)[0]
+alert.dataframe
 ```
 
 ## Alert filtering
@@ -47,6 +51,15 @@ Cloud and recreate it.
 Attribute filters use Pub/Sub's built-in subscription
 [filtering syntax](https://docs.cloud.google.com/pubsub/docs/subscription-message-filter#filtering_syntax). Because
 Pub/Sub message attributes are strings (default), using this filtering method is recommended when the filtering logic is simple.
+
+Alerts from different streams will have different attributes available.
+If you pulled an alert from the loop subscription created above, you can see the attributes by doing:
+
+```python
+alert.attributes
+```
+
+Now let's create a subscription to the full alerts topic with an attribute filter attached.
 
 ```python
 # Topic that the subscription should be connected to
